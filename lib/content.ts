@@ -12,6 +12,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: "Free", href: "/free" },
   { label: "Gift card", href: "/giftcard" },
   { label: "Affiliate program", href: "/affiliate-program" },
+  { label: "Blog", href: "/blog" }
 ];
 
 export const HERO = {

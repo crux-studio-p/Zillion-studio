@@ -46,7 +46,7 @@ export default function AffiliateProgramPage() {
   return (
     <>
       <Nav />
-      <div className="h-screen relative flex items-center justify-center p-4 md:p-8 pt-[100px] md:pt-[120px] pb-4 md:pb-8 overflow-hidden">
+      <div className="h-[100dvh] relative flex items-center justify-center p-4 md:p-8 pt-[100px] md:pt-[120px] pb-4 md:pb-8 overflow-hidden">
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <Image 
@@ -76,7 +76,7 @@ export default function AffiliateProgramPage() {
         </div>
 
         {/* Right Side - Form */}
-        <div className="w-full md:w-1/2 bg-[#fafafa]">
+        <div className="w-full md:w-1/2 bg-[#fafafa] h-full min-h-0">
           {success ? (
             <div className="flex flex-col items-center justify-center h-full p-10 text-center">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">

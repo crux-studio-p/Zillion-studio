@@ -3,15 +3,16 @@
 import { motion } from "motion/react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { EASE_OUT } from "@/lib/hero-timing";
+import { SCENE_TWO } from "@/lib/content";
+import type { Layout } from "@/lib/hero-layout";
 import { BlurWords } from "./BlurWords";
 import { Cta } from "./Cta";
 import { MentionTag } from "./MentionTag";
 
-import { SCENE_TWO } from "@/lib/content";
+type Props = { layout: Layout; show: boolean; tags: boolean; onUp: () => void; onDown: () => void };
 
-type Props = { show: boolean; tags: boolean; onUp: () => void; onDown: () => void };
-
-export function SceneTwo({ show, tags, onUp, onDown }: Props) {
+export function SceneTwo({ layout, show, tags, onUp, onDown }: Props) {
+  const t = layout.two;
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
       <motion.p
@@ -21,12 +22,16 @@ export function SceneTwo({ show, tags, onUp, onDown }: Props) {
             ? { opacity: 1, filter: "blur(0px)", y: 0, transition: { duration: 0.7, ease: EASE_OUT } }
             : { opacity: 0, filter: "blur(6px)", y: 40, transition: { duration: 0.25 } }
         }
-        className="absolute left-16 top-[60px] text-[9px] font-semibold uppercase tracking-[0.22em]"
+        className="absolute font-semibold uppercase tracking-[0.22em]"
+        style={{ left: t.left, top: t.eyebrowTop, fontSize: t.eyebrowSize }}
       >
         {SCENE_TWO.eyebrow}
       </motion.p>
 
-      <h2 className="absolute left-16 top-[83px] w-[330px] text-[46px] font-medium leading-[1.09] tracking-[-0.04em]">
+      <h2
+        className="absolute font-medium tracking-[-0.04em]"
+        style={{ left: t.left, top: t.headTop, width: t.headW, fontSize: t.headSize, lineHeight: t.headLH }}
+      >
         {SCENE_TWO.headline.map((line, i) => {
           const wordsBefore = SCENE_TWO.headline
             .slice(0, i)
@@ -46,43 +51,47 @@ export function SceneTwo({ show, tags, onUp, onDown }: Props) {
         })}
       </h2>
 
-      <BlurWords
-        text={SCENE_TWO.subtitle}
-        play={show}
-        delay={1.3}
-        stagger={0.04}
-        className="absolute left-16 top-[261px] w-[172px] text-[10px] leading-[1.45] text-neutral-800"
-      />
+      <div
+        className="absolute text-neutral-800"
+        style={{ left: t.left, top: t.subTop, width: t.subW, fontSize: t.subSize, lineHeight: t.subLH }}
+      >
+        <BlurWords text={SCENE_TWO.subtitle} play={show} delay={1.3} stagger={0.04} />
+      </div>
 
-      <Cta
-        primary={SCENE_TWO.primary}
-        secondary={SCENE_TWO.secondary}
-        play={show}
-        delay={2.4}
-        className="pointer-events-auto absolute left-16 top-[356px] origin-left"
-      />
+      <div className="absolute" style={{ left: t.left, top: t.ctaTop }}>
+        <Cta
+          primary={SCENE_TWO.primary}
+          secondary={SCENE_TWO.secondary}
+          play={show}
+          delay={2.4}
+          size={t.ctaSize}
+          className="pointer-events-auto"
+        />
+      </div>
 
       {tags && (
         <div>
-          <MentionTag label={SCENE_TWO.tags[0]} delay={0} rotate={-5} className="left-1/2 top-[242px] -ml-[20px] bg-[#8c2723]" />
-          <MentionTag label={SCENE_TWO.tags[1]} delay={0.15} rotate={-4} className="left-1/2 top-[322px] ml-[225px] bg-[#141414]" />
+          <MentionTag label={SCENE_TWO.tags[0]} delay={0} rotate={-5} className="bg-[#8c2723]" style={t.tags[0]} />
+          <MentionTag label={SCENE_TWO.tags[1]} delay={0.15} rotate={-4} className="bg-[#141414]" style={t.tags[1]} />
         </div>
       )}
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: show ? 1 : 0 }}
-        transition={{ duration: 0.4, delay: show ? 1.2 : 0 }}
-        style={{ pointerEvents: show ? "auto" : "none" }}
-        className="absolute right-[44px] top-[285px] flex flex-col gap-[5px]"
-      >
-        <button type="button" aria-label="Previous section" onClick={onUp} className="grid h-6 w-6 place-items-center rounded-full bg-card text-foreground shadow-sm">
-          <ChevronUp size={12} />
-        </button>
-        <button type="button" aria-label="Next section" onClick={onDown} className="grid h-6 w-6 place-items-center rounded-full bg-card text-foreground shadow-sm">
-          <ChevronDown size={12} />
-        </button>
-      </motion.div>
+      {t.pager && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: show ? 1 : 0 }}
+          transition={{ duration: 0.4, delay: show ? 1.2 : 0 }}
+          style={{ pointerEvents: show ? "auto" : "none", right: t.pager.right, top: t.pager.top }}
+          className="absolute flex flex-col gap-[5px]"
+        >
+          <button type="button" aria-label="Previous section" onClick={onUp} className="grid h-6 w-6 place-items-center rounded-full bg-card text-foreground shadow-sm">
+            <ChevronUp size={12} />
+          </button>
+          <button type="button" aria-label="Next section" onClick={onDown} className="grid h-6 w-6 place-items-center rounded-full bg-card text-foreground shadow-sm">
+            <ChevronDown size={12} />
+          </button>
+        </motion.div>
+      )}
     </div>
   );
 }
