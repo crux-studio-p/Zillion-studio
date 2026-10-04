@@ -1,6 +1,12 @@
 import { MessageSquare, Users, MoreVertical, Search, Plus } from "lucide-react";
+import { db } from "@/lib/db";
+import { reviews, affiliateApplications } from "@/lib/db/schema";
+import { eq, desc } from "drizzle-orm";
+import Link from "next/link";
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+  const pendingReviews = await db.select().from(reviews).where(eq(reviews.status, "Pending")).orderBy(desc(reviews.createdAt));
+  const pendingAffiliates = await db.select().from(affiliateApplications).where(eq(affiliateApplications.status, "Pending")).orderBy(desc(affiliateApplications.createdAt));
   return (
     <div className="max-w-4xl space-y-10">
       <div>
@@ -10,51 +16,55 @@ export default function AdminDashboard() {
       <div className="space-y-4">
         <h2 className="text-[14px] font-semibold text-neutral-100">Action needed</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Card 1 */}
-          <div className="bg-[#1c1c1c] border border-white/5 rounded-[14px] p-5 flex flex-col justify-between hover:bg-[#202020] transition-colors cursor-pointer group shadow-sm">
+          {/* Card 1: Reviews */}
+          <Link href="/admin/reviews" className="bg-[#1c1c1c] border border-white/5 rounded-[14px] p-5 flex flex-col justify-between hover:bg-[#202020] transition-colors cursor-pointer group shadow-sm">
             <div className="flex justify-between items-start">
               <div className="w-12 h-9 bg-white/5 rounded-lg flex items-center justify-center text-neutral-300">
                 <MessageSquare size={18} strokeWidth={2} />
               </div>
-              <button className="text-muted-foreground hover:text-white transition-colors opacity-0 group-hover:opacity-100">
-                <MoreVertical size={16} />
-              </button>
             </div>
             <div className="mt-6 flex justify-between items-center">
               <div>
                 <h3 className="text-[14px] font-semibold text-neutral-200">Reviews</h3>
-                <p className="text-[13px] text-muted-foreground mt-0.5">12 pending</p>
+                <p className="text-[13px] text-muted-foreground mt-0.5">{pendingReviews.length} pending</p>
               </div>
               <div className="flex -space-x-1.5">
-                <img src="https://i.pravatar.cc/100?img=1" className="w-[26px] h-[26px] rounded-full border-[2px] border-[#1c1c1c]" alt="Avatar" />
-                <img src="https://i.pravatar.cc/100?img=2" className="w-[26px] h-[26px] rounded-full border-[2px] border-[#1c1c1c]" alt="Avatar" />
-                <div className="w-[26px] h-[26px] rounded-full border-[2px] border-[#1c1c1c] bg-neutral-700 flex items-center justify-center text-[9px] text-neutral-300 font-medium">+10</div>
+                {pendingReviews.slice(0, 2).map((r) => (
+                  <div key={r.id} className="w-[26px] h-[26px] rounded-full border-[2px] border-[#1c1c1c] bg-neutral-800 flex items-center justify-center text-[9px] text-neutral-300 font-bold uppercase overflow-hidden">
+                    {r.name.substring(0, 2)}
+                  </div>
+                ))}
+                {pendingReviews.length > 2 && (
+                  <div className="w-[26px] h-[26px] rounded-full border-[2px] border-[#1c1c1c] bg-neutral-700 flex items-center justify-center text-[9px] text-neutral-300 font-medium">+{pendingReviews.length - 2}</div>
+                )}
               </div>
             </div>
-          </div>
+          </Link>
 
-          {/* Card 2 */}
-          <div className="bg-[#1c1c1c] border border-white/5 rounded-[14px] p-5 flex flex-col justify-between hover:bg-[#202020] transition-colors cursor-pointer group shadow-sm">
+          {/* Card 2: Affiliates */}
+          <Link href="/admin/affiliates" className="bg-[#1c1c1c] border border-white/5 rounded-[14px] p-5 flex flex-col justify-between hover:bg-[#202020] transition-colors cursor-pointer group shadow-sm">
             <div className="flex justify-between items-start">
               <div className="w-12 h-9 bg-white/5 rounded-lg flex items-center justify-center text-neutral-300">
                 <Users size={18} strokeWidth={2} />
               </div>
-              <button className="text-muted-foreground hover:text-white transition-colors opacity-0 group-hover:opacity-100">
-                <MoreVertical size={16} />
-              </button>
             </div>
             <div className="mt-6 flex justify-between items-center">
               <div>
                 <h3 className="text-[14px] font-semibold text-neutral-200">Affiliate Queue</h3>
-                <p className="text-[13px] text-muted-foreground mt-0.5">5 applications</p>
+                <p className="text-[13px] text-muted-foreground mt-0.5">{pendingAffiliates.length} applications</p>
               </div>
               <div className="flex -space-x-1.5">
-                <img src="https://i.pravatar.cc/100?img=3" className="w-[26px] h-[26px] rounded-full border-[2px] border-[#1c1c1c]" alt="Avatar" />
-                <img src="https://i.pravatar.cc/100?img=4" className="w-[26px] h-[26px] rounded-full border-[2px] border-[#1c1c1c]" alt="Avatar" />
-                <div className="w-[26px] h-[26px] rounded-full border-[2px] border-[#1c1c1c] bg-neutral-700 flex items-center justify-center text-[9px] text-neutral-300 font-medium">+3</div>
+                {pendingAffiliates.slice(0, 2).map((a) => (
+                  <div key={a.id} className="w-[26px] h-[26px] rounded-full border-[2px] border-[#1c1c1c] bg-neutral-800 flex items-center justify-center text-[9px] text-neutral-300 font-bold uppercase overflow-hidden">
+                    {a.discordName.substring(0, 2)}
+                  </div>
+                ))}
+                {pendingAffiliates.length > 2 && (
+                  <div className="w-[26px] h-[26px] rounded-full border-[2px] border-[#1c1c1c] bg-neutral-700 flex items-center justify-center text-[9px] text-neutral-300 font-medium">+{pendingAffiliates.length - 2}</div>
+                )}
               </div>
             </div>
-          </div>
+          </Link>
         </div>
       </div>
 
