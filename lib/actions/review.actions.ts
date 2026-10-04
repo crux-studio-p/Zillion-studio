@@ -47,4 +47,5 @@ export async function getApprovedReviews(tebexPackageId: string) {
       )
     )
     .orderBy(desc(reviews.createdAt));
+    
 }
