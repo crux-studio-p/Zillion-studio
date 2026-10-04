@@ -37,7 +37,7 @@ export default function StorePage() {
     <div className="flex min-h-screen flex-col bg-transparent text-foreground">
       <Nav />
       
-      <main className="flex-1 px-6 pb-24 pt-[160px]">
+      <main className="flex-1 px-6 pb-24 pt-[100px] md:pt-[160px]">
         <motion.div 
           className="mx-auto max-w-5xl"
           variants={staggerContainer}

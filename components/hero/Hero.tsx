@@ -2,22 +2,18 @@
 "use client";
 import { useRef, useState } from "react";
 import { MotionConfig, useMotionValueEvent, useScroll } from "motion/react";
+import { HERO } from "@/lib/content";
+import { Canvas } from "./Canvas";
 import { CardStack } from "./CardStack";
 import { HeroCopy } from "./HeroCopy";
 import { Nav } from "./Nav";
 import { SceneTwo } from "./SceneTwo";
-import { Canvas } from "./Canvas";
-import { useDesignScale } from "./useDesignScale";
+import { useHeroLayout } from "./useHeroLayout";
 
-// Swap for: backgroundImage: "url(/silk.jpg)", backgroundSize: "cover"
-const SILK = `
-  radial-gradient(1200px 600px at 20% 10%, #eaeae5 0%, transparent 60%),
-  radial-gradient(900px 500px at 80% 30%, #ebebeb 0%, transparent 60%),
-  linear-gradient(120deg, #e2e2dd, #e6e6e1 40%, #dcdcd7 70%, #eaeae5)
-`;
+
 
 export default function Hero() {
-  useDesignScale();
+  const layout = useHeroLayout();
   const track = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: track, offset: ["start start", "end end"] });
   const [sceneTwo, setSceneTwo] = useState(false);
@@ -33,27 +29,34 @@ export default function Hero() {
   return (
     <MotionConfig reducedMotion="user">
       <Nav />
+      {/* real heading for crawlers and screen readers; the animated copy is aria-hidden */}
+      <h1 className="sr-only">{HERO.headline.join(" ")}</h1>
       <div
         ref={track}
         className="relative text-foreground"
-        style={{ height: "calc(100vh + 1100px)" }}
+        style={{ height: "calc(100lvh + 1100px * var(--k, 1))" }}
       >
-        <div className="sticky top-0 h-screen overflow-hidden" style={{ background: SILK }}>
-          <Canvas>
-            <CardStack progress={scrollYProgress} />
-            <SceneTwo
-              show={sceneTwo}
-              tags={tags}
-              onUp={() => go(0)}
-              onDown={() => go((track.current?.offsetHeight ?? 0) - window.innerHeight)}
-            />
-          </Canvas>
+        <div className="sticky top-0 overflow-hidden" style={{ height: "100lvh" }}>
+          {layout && (
+            <Canvas layout={layout}>
+              <CardStack layout={layout} progress={scrollYProgress} />
+              <SceneTwo
+                layout={layout}
+                show={sceneTwo}
+                tags={tags}
+                onUp={() => go(0)}
+                onDown={() => go((track.current?.offsetHeight ?? 0) - window.innerHeight)}
+              />
+            </Canvas>
+          )}
         </div>
-        <div className="pointer-events-none absolute inset-0 z-30">
-          <Canvas>
-            <HeroCopy />
-          </Canvas>
-        </div>
+        {layout && (
+          <div className="pointer-events-none absolute inset-0 z-30">
+            <Canvas layout={layout}>
+              <HeroCopy layout={layout} />
+            </Canvas>
+          </div>
+        )}
       </div>
     </MotionConfig>
   );

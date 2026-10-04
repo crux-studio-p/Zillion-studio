@@ -30,7 +30,7 @@ export default function CartPage() {
   return (
     <>
     <Nav />
-    <div className="min-h-screen pt-[160px] pb-24 px-6 md:px-12 max-w-7xl mx-auto">
+    <div className="min-h-screen pt-[100px] md:pt-[160px] pb-24 px-6 md:px-12 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-12">
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
