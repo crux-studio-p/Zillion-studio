@@ -1,9 +1,10 @@
 "use client";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
   Home, FolderKanban, MessageSquare, Users, Settings, FileText, 
-  ChevronDown, ExternalLink, HelpCircle
+  ChevronDown, ExternalLink, HelpCircle, Menu, X
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -17,9 +18,47 @@ const NAV_ITEMS = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Close sidebar on route change on mobile
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
 
   return (
-    <aside className="w-[260px] flex flex-col bg-[#141414] border-r border-white/5 text-neutral-300 h-screen sticky top-0 font-sans">
+    <>
+      {/* Mobile Header & Toggle */}
+      <div className="md:hidden fixed top-0 left-0 w-full h-14 bg-[#141414]/80 backdrop-blur-md border-b border-white/5 z-40 flex items-center px-4">
+        <button 
+          onClick={() => setIsOpen(true)}
+          className="p-2 -ml-2 text-neutral-300 hover:text-white"
+        >
+          <Menu size={20} />
+        </button>
+        <span className="ml-2 font-semibold text-neutral-200">Admin</span>
+      </div>
+
+      {/* Backdrop */}
+      {isOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed md:sticky top-0 left-0 z-50 h-[100dvh] bg-[#141414] border-r border-white/5 
+        text-neutral-300 font-sans flex flex-col transition-transform duration-300 ease-in-out
+        w-[66vw] md:w-[260px]
+        ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
+      `}>
+        {/* Mobile close button inside sidebar */}
+        <div className="md:hidden flex items-center justify-end p-4 border-b border-white/5">
+          <button onClick={() => setIsOpen(false)} className="text-neutral-400 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
       <div className="p-4 flex items-center gap-3 mt-2 cursor-pointer hover:bg-white/5 rounded-lg mx-2">
         <div className="w-9 h-9 rounded-full bg-neutral-800 shrink-0 flex items-center justify-center text-[12px] font-bold text-neutral-300">
           SD
@@ -67,5 +106,6 @@ export function AdminSidebar() {
         </div>
       </div>
     </aside>
+    </>
   );
 }
