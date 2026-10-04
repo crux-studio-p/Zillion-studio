@@ -14,7 +14,8 @@ export default function UsersAdminPage() {
       </div>
 
       <div className="bg-[#1c1c1c] border border-white/5 rounded-[14px] overflow-hidden shadow-sm">
-        <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse whitespace-nowrap">
           <thead>
             <tr className="border-b border-white/5 text-[12px] font-medium text-muted-foreground bg-[#181818]">
               <th className="py-3 px-5 font-medium">User</th>
@@ -62,7 +63,8 @@ export default function UsersAdminPage() {
               </td>
             </tr>
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   );

@@ -20,7 +20,8 @@ export default function ProductsAdminPage() {
             <input type="text" placeholder="Search products..." className="bg-transparent border-none outline-none text-[13px] text-neutral-200 placeholder:text-neutral-600 w-full" />
           </div>
         </div>
-        <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse whitespace-nowrap">
           <thead>
             <tr className="border-b border-white/5 text-[12px] font-medium text-muted-foreground bg-[#181818]">
               <th className="py-3 px-5 font-medium">Product Name</th>
@@ -50,7 +51,8 @@ export default function ProductsAdminPage() {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   );
