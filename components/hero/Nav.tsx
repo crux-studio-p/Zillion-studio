@@ -1,13 +1,18 @@
 // components/hero/Nav.tsx
 "use client";
 import { motion } from "motion/react";
-import { MessageCircle, Sun, User } from "lucide-react";
+import { MessageCircle, Sun, User, ShoppingBag } from "lucide-react";
 import { EASE_OUT, T } from "@/lib/hero-timing";
+import { useState } from "react";
+import { CartDrawer } from "@/components/store/CartDrawer";
 
 import { BRAND, NAV_LINKS } from "@/lib/content";
 
 export function Nav() {
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  
   return (
+    <>
     <div className="fixed left-0 top-0 z-50 w-full text-foreground">
       {/* Seamless gradient blur (no box/hard edges) */}
       <div 
@@ -52,7 +57,21 @@ export function Nav() {
               </motion.li>
             ))}
           </ul>
-          <div className="flex gap-[3px]">
+          <div className="flex gap-2">
+            <motion.button
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              aria-label="Shopping Cart"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: T.nav, duration: 0.5, ease: EASE_OUT }}
+              className="grid h-10 w-10 place-items-center rounded-full bg-card text-foreground shadow-sm relative"
+            >
+              <ShoppingBag size={18} />
+              <span className="absolute -top-1 -right-1 h-[18px] w-[18px] rounded-full bg-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground border-2 border-background">
+                2
+              </span>
+            </motion.button>
             {[User, Sun].map((Icon, i) => (
               <motion.button
                 key={i}
@@ -60,15 +79,17 @@ export function Nav() {
                 aria-label={i === 0 ? "Account" : "Toggle theme"}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: T.nav, duration: 0.5, ease: EASE_OUT }}
-                className="grid h-6 w-6 place-items-center rounded-full bg-card text-foreground shadow-sm"
+                transition={{ delay: T.nav + 0.05, duration: 0.5, ease: EASE_OUT }}
+                className="grid h-10 w-10 place-items-center rounded-full bg-card text-foreground shadow-sm"
               >
-                <Icon size={11} />
+                <Icon size={18} />
               </motion.button>
             ))}
           </div>
         </nav>
       </motion.header>
-    </div>
+      </div>
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+    </>
   );
 }

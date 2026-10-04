@@ -3,7 +3,7 @@
 import { use, useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Check, ShieldCheck, Star, ChevronRight, X } from "lucide-react";
+import { ArrowLeft, Check, ShieldCheck, Star, ChevronRight, X, ShoppingBag } from "lucide-react";
 import { Nav } from "@/components/hero/Nav";
 import { Footer } from "@/components/footer/Footer";
 import { Faq } from "@/components/faq/Faq";
@@ -170,11 +170,12 @@ export default function ProductDetailPage({
               </div>
 
               <div className="mt-10">
-                <button className="flex w-full items-center justify-center rounded-xl bg-primary py-4 text-[14px] font-bold text-primary-foreground shadow-lg transition-transform hover:-translate-y-[2px] active:translate-y-0 active:scale-[0.98]">
-                  Purchase via Tebex
+                <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-[14px] font-bold text-primary-foreground shadow-lg transition-transform hover:-translate-y-[2px] active:translate-y-0 active:scale-[0.98]">
+                  <ShoppingBag size={18} />
+                  Add to Cart
                 </button>
                 <div className="mt-4 flex items-center justify-center gap-2 text-[12px] text-muted-foreground">
-                  <ShieldCheck size={14} className="text-[#5cc8b8]" />
+                  <ShieldCheck size={14} className="text-primary" />
                   Secure checkout, instant delivery to your email.
                 </div>
               </div>
