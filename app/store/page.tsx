@@ -87,11 +87,24 @@ export default function StorePage() {
                 </div>
 
                 {/* Product Info */}
-                <div className="px-1">
-                  <h3 className="text-[18px] font-bold tracking-tight text-foreground leading-snug">
-                    {p.title}
-                  </h3>
-                  <p className="mt-1.5 text-[13px] font-semibold text-muted-foreground tracking-wide uppercase">{p.category}</p>
+                <div className="flex flex-col px-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-[18px] font-bold tracking-tight text-foreground leading-snug">
+                        {p.title}
+                      </h3>
+                      <p className="mt-1 text-[13px] font-semibold text-muted-foreground tracking-wide uppercase">
+                        {p.category}
+                      </p>
+                    </div>
+                    {p.price && (
+                      <div className="shrink-0 pt-0.5">
+                        <span className="text-[20px] md:text-[22px] font-normal tracking-tight text-foreground transition-colors duration-300 group-hover:text-primary">
+                          {p.price}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </Link>
             ))}

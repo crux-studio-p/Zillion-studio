@@ -76,38 +76,42 @@ export function ArcGallery() {
             transform: `scale(${layout.k})`,
           }}
         >
-          {Array.from({ length: COUNT }, (_, i) => {
-            const p = PRODUCTS[i % PRODUCTS.length];
-            const dup = i >= PRODUCTS.length;
-            return (
-              <Link
-                key={i}
-                ref={(el) => {
-                  cards.current[i] = el;
-                }}
-                href={p.href}
-                aria-label={`${p.category}: ${p.title}`}
-                aria-hidden={dup || undefined}
-                tabIndex={dup ? -1 : undefined}
-                onPointerEnter={pause}
-                onPointerLeave={resume}
-                onFocus={pause}
-                onBlur={resume}
-                className="absolute left-0 top-0 block will-change-transform"
-                style={{ width: layout.card.w, height: layout.card.h }}
-              >
-                <span
-                  className="absolute inset-0 block overflow-hidden"
-                  style={{ borderRadius: RADIUS, background: p.fallback }}
-                >
-                  <Image src="/affiliate-program-bg.png" alt="" fill sizes="300px" className="object-cover" />
-                  <span className="absolute bottom-2.5 left-3 text-[10px] font-bold uppercase tracking-wide text-white drop-shadow-md z-10">
-                    {p.category}
-                  </span>
-                </span>
-              </Link>
-            );
-          })}
+          <div className="absolute inset-0 [mask-image:linear-gradient(to_bottom,black_80%,transparent_100%)]">
+            <div className="absolute inset-0 [mask-image:linear-gradient(to_right,transparent_0%,black_20%,black_80%,transparent_100%)]">
+              {Array.from({ length: COUNT }, (_, i) => {
+                const p = PRODUCTS[i % PRODUCTS.length];
+                const dup = i >= PRODUCTS.length;
+                return (
+                  <Link
+                    key={i}
+                    ref={(el) => {
+                      cards.current[i] = el;
+                    }}
+                    href={p.href}
+                    aria-label={`${p.category}: ${p.title}`}
+                    aria-hidden={dup || undefined}
+                    tabIndex={dup ? -1 : undefined}
+                    onPointerEnter={pause}
+                    onPointerLeave={resume}
+                    onFocus={pause}
+                    onBlur={resume}
+                    className="absolute left-0 top-0 block will-change-transform"
+                    style={{ width: layout.card.w, height: layout.card.h }}
+                  >
+                    <span
+                      className="absolute inset-0 block overflow-hidden"
+                      style={{ borderRadius: RADIUS, background: p.fallback }}
+                    >
+                      <Image src="/affiliate-program-bg.png" alt="" fill sizes="300px" className="object-cover" />
+                      <span className="absolute bottom-2.5 left-3 text-[10px] font-bold uppercase tracking-wide text-white drop-shadow-md z-10">
+                        {p.category}
+                      </span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
 
           <div
             className="absolute text-center flex flex-col items-center"
