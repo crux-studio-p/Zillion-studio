@@ -36,7 +36,7 @@ export default function Hero() {
         className="relative text-foreground"
         style={{ height: "calc(100lvh + 1100px * var(--k, 1))" }}
       >
-        <div className="sticky top-0 overflow-hidden" style={{ height: "100lvh" }}>
+        <div className="sticky top-0 overflow-hidden [mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]" style={{ height: "100lvh" }}>
           {layout && (
             <Canvas layout={layout}>
               <CardStack layout={layout} progress={scrollYProgress} />
