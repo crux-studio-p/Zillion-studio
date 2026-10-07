@@ -6,6 +6,7 @@ import { Nav } from "@/components/hero/Nav";
 import { Footer } from "@/components/footer/Footer";
 import { motion, Variants } from "motion/react";
 import { TebexCategory } from "@/lib/tebex";
+import { AddToCartButton } from "./AddToCartButton";
 
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
@@ -80,9 +81,10 @@ export function StoreClient({ categories }: { categories: TebexCategory[] }) {
           <motion.div variants={fadeUp} className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
             {filteredPackages.length > 0 ? (
               filteredPackages.map((p, i) => (
-                <Link key={p.id || i} href={`/store/${slugify(p.name)}-${p.id}`} className="group flex flex-col gap-5">
+                <div key={p.id || i} className="group flex flex-col gap-5">
                   {/* Product Cover */}
-                  <div className="relative w-full overflow-hidden rounded-[24px] transition-all duration-300 group-hover:-translate-y-1 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-muted">
+                  <Link href={`/store/${slugify(p.name)}-${p.id}`}>
+                    <div className="relative w-full overflow-hidden rounded-[24px] transition-all duration-300 group-hover:-translate-y-1 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-muted">
                     {p.image ? (
                       <img src={p.image} alt={p.name} className="w-full h-auto block" />
                     ) : (
@@ -97,26 +99,28 @@ export function StoreClient({ categories }: { categories: TebexCategory[] }) {
                       </span>
                     </div>
                   </div>
+                  </Link>
 
                   {/* Product Info */}
                   <div className="flex flex-col px-1">
                     <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="text-[18px] font-bold tracking-tight text-foreground leading-snug">
+                      <Link href={`/store/${slugify(p.name)}-${p.id}`}>
+                        <h3 className="text-[18px] font-bold tracking-tight text-foreground leading-snug group-hover:text-primary transition-colors">
                           {p.name}
                         </h3>
                         <p className="mt-1 text-[13px] font-semibold text-muted-foreground tracking-wide uppercase">
                           {p.categoryName}
                         </p>
-                      </div>
-                      <div className="shrink-0 pt-0.5">
+                      </Link>
+                      <div className="shrink-0 flex items-center gap-3 pt-0.5">
                         <span className="text-[20px] md:text-[22px] font-normal tracking-tight text-foreground transition-colors duration-300 group-hover:text-primary">
                           {p.total_price === 0 ? "Free" : `$${p.total_price.toFixed(2)}`}
                         </span>
+                        <AddToCartButton packageId={p.id} />
                       </div>
                     </div>
                   </div>
-                </Link>
+                </div>
               ))
             ) : (
               <div className="col-span-full py-12 text-center text-muted-foreground">

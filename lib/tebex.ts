@@ -113,3 +113,53 @@ export async function getCategoriesWithPackages(): Promise<TebexCategory[]> {
   console.log(`Fetched ${json.data.length} categories.`);
   return json.data;
 }
+
+/**
+ * Adds a specific package to the basket.
+ */
+export async function addPackageToBasket(ident: string, packageId: number, quantity: number = 1): Promise<any> {
+  const res = await fetch(`https://headless.tebex.io/api/baskets/${ident}/packages`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      package_id: packageId,
+      quantity,
+    }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to add package to basket: ${errorText}`);
+  }
+
+  const json = await res.json();
+  return json.data;
+}
+
+/**
+ * Removes a package from the basket by setting its quantity to 0, or by using a delete endpoint if supported.
+ * Note: Tebex Headless API uses PUT to update quantity.
+ */
+export async function updatePackageQuantity(ident: string, packageId: number, quantity: number): Promise<any> {
+  const res = await fetch(`https://headless.tebex.io/api/baskets/${ident}/packages/${packageId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      quantity,
+    }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to update package quantity: ${errorText}`);
+  }
+
+  const json = await res.json();
+  return json.data;
+}
