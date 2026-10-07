@@ -6,6 +6,8 @@ export const metadata = {
   description: "Checkout and purchase premium FiveM scripts.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function CartPage() {
   const cart = await getCart();
 

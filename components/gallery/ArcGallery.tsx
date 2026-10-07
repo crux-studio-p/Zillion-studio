@@ -37,7 +37,7 @@ export function ArcGallery({ products }: { products?: GalleryProduct[] }) {
   inViewRef.current = inView;
 
   // Fallback to default products if no dynamic products are passed
-  const displayProducts = products && products.length > 0 
+  const displayProducts: GalleryProduct[] = products && products.length > 0 
     ? products 
     : DEFAULT_PRODUCTS.map(p => ({
         category: p.category,

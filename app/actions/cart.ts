@@ -7,7 +7,7 @@ import { addPackageToBasket, createBasket, getAuthUrls, updatePackageQuantity, T
 /**
  * Retrieves the current basket identifier from cookies, or creates a new one.
  */
-async function getOrCreateBasketIdent() {
+async function getOrCreateBasketIdent(): Promise<string> {
   const cookieStore = await cookies();
   let basketIdent = cookieStore.get("tebex_basket")?.value;
 
@@ -15,6 +15,10 @@ async function getOrCreateBasketIdent() {
     const basket = await createBasket();
     basketIdent = basket.ident;
     
+    if (!basketIdent) {
+      throw new Error("Failed to create basket ident");
+    }
+
     cookieStore.set("tebex_basket", basketIdent, {
       maxAge: 60 * 60 * 24 * 30, // 30 days
       path: "/",
@@ -89,7 +93,10 @@ export async function getCart() {
 
     const json = await res.json();
     return json.data;
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.digest === 'DYNAMIC_SERVER_USAGE') {
+      throw error;
+    }
     console.error("Failed to fetch cart:", error);
     return null;
   }
