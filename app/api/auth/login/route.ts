@@ -14,6 +14,10 @@ export async function GET(request: Request) {
       isNewBasket = true;
     }
 
+    if (!basketIdent) {
+      throw new Error("Could not create or find basket ident");
+    }
+
     const returnUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     
     // Fetch authentication links
