@@ -2,7 +2,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { MessageCircle, Menu, ShoppingBag, Sun, User, X } from "lucide-react";
+import { MessageCircle, Menu, ShoppingBag, Sun, User, X, LogOut, Loader2 } from "lucide-react";
 import { EASE_OUT, T } from "@/lib/hero-timing";
 import { CartDrawer } from "@/components/store/CartDrawer";
 import { BRAND, NAV_LINKS } from "@/lib/content";
@@ -25,6 +25,20 @@ const ICON_BTN = "grid place-items-center rounded-full bg-card text-foreground s
 export function Nav() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState<{username?: string, id?: string} | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then(res => res.json())
+      .then(data => {
+        if (data.authenticated) {
+          setUser(data.user);
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setAuthLoading(false));
+  }, []);
 
   // lock page scroll while the menu is open; Escape closes it
   useEffect(() => {
@@ -98,20 +112,57 @@ export function Nav() {
                 </span>
               </motion.button>
 
-              <div className="hidden gap-2 lg:flex">
-                {[User, Sun].map((Icon, i) => (
-                  <motion.button
-                    key={i}
-                    type="button"
-                    aria-label={i === 0 ? "Account" : "Toggle theme"}
+              <div className="hidden items-center gap-2 lg:flex">
+                {authLoading ? (
+                  <div className="h-10 w-[72px] animate-pulse rounded-full bg-card/40" />
+                ) : user ? (
+                  <div className="group relative">
+                    <motion.button
+                      type="button"
+                      aria-label="Account"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.5, ease: EASE_OUT }}
+                      className="flex h-10 items-center gap-2 rounded-full bg-card px-4 text-[14.5px] font-semibold text-foreground shadow-sm transition-colors hover:bg-card/80"
+                    >
+                      <User size={16} />
+                      <span className="max-w-[120px] truncate">{user.username || "Account"}</span>
+                    </motion.button>
+                    {/* Dropdown for logout */}
+                    <div className="absolute right-0 top-full hidden pt-2 group-hover:block">
+                      <div className="flex w-[140px] flex-col rounded-xl border border-border/50 bg-card p-2 shadow-xl">
+                        <a 
+                          href="/api/auth/logout" 
+                          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                        >
+                          <LogOut size={16} />
+                          Logout
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <motion.a
+                    href="/api/auth/login"
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: T.nav + 0.05, duration: 0.5, ease: EASE_OUT }}
-                    className={`${ICON_BTN} h-10 w-10`}
+                    className="flex h-10 items-center justify-center rounded-full bg-primary px-5 text-[14.5px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-85"
                   >
-                    <Icon size={18} />
-                  </motion.button>
-                ))}
+                    Login
+                  </motion.a>
+                )}
+
+                <motion.button
+                  type="button"
+                  aria-label="Toggle theme"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: T.nav + 0.1, duration: 0.5, ease: EASE_OUT }}
+                  className={`${ICON_BTN} h-10 w-10`}
+                >
+                  <Sun size={18} />
+                </motion.button>
               </div>
 
               <button
@@ -176,10 +227,17 @@ export function Nav() {
             </ul>
 
             <div className="mt-auto flex gap-3 pt-8">
-              <button type="button" aria-label="Account" className={`${ICON_BTN} h-11 w-11`}>
-                <User size={18} />
-              </button>
-              <button type="button" aria-label="Toggle theme" className={`${ICON_BTN} h-11 w-11`}>
+              {user ? (
+                <a href="/api/auth/logout" className={`${ICON_BTN} flex h-11 flex-1 items-center justify-center gap-2 bg-muted/50 text-foreground hover:bg-muted`}>
+                  <LogOut size={18} />
+                  Logout
+                </a>
+              ) : (
+                <a href="/api/auth/login" className="flex h-11 flex-1 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground shadow-sm">
+                  Login
+                </a>
+              )}
+              <button type="button" aria-label="Toggle theme" className={`${ICON_BTN} h-11 w-11 shrink-0`}>
                 <Sun size={18} />
               </button>
             </div>

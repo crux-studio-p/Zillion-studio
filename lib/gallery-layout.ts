@@ -53,13 +53,13 @@ function desktop(w: number, h: number): Layout {
     text: {
       cx: W / 2,
       top: 504 + offY,
-      w: 240,
-      headSize: 15,
-      headLH: 15,
-      subSize: 12,
-      subLH: 15,
-      subW: 215,
-      ctaSize: "sm",
+      w: 600,
+      headSize: 42,
+      headLH: 48,
+      subSize: 18,
+      subLH: 26,
+      subW: 500,
+      ctaSize: "md",
     },
   };
 }

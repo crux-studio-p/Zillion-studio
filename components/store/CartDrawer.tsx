@@ -1,32 +1,51 @@
 "use client";
 
 import { motion, AnimatePresence } from "motion/react";
-import { X, ShoppingBag, Trash2, ArrowRight } from "lucide-react";
+import { X, ShoppingBag, Trash2, ArrowRight, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { getCart, removeFromCart } from "@/app/actions/cart";
+import { toast } from "sonner";
 
 interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const DUMMY_CART_ITEMS = [
-  {
-    id: "1",
-    name: "Zillion Inventory UI",
-    price: 15.0,
-    image: "/affiliate-program-bg.png",
-  },
-  {
-    id: "2",
-    name: "Premium Admin Dashboard",
-    price: 35.0,
-    image: "/affiliate-program-bg.png",
-  }
-];
-
 export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
-  const subtotal = DUMMY_CART_ITEMS.reduce((sum, item) => sum + item.price, 0);
+  const [cart, setCart] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [removingId, setRemovingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCart();
+    }
+  }, [isOpen]);
+
+  const fetchCart = async () => {
+    setLoading(true);
+    const data = await getCart();
+    setCart(data);
+    setLoading(false);
+  };
+
+  const handleRemove = async (packageId: number) => {
+    setRemovingId(packageId);
+    const res = await removeFromCart(packageId);
+    if (res.success) {
+      toast.success("Item removed from cart");
+      await fetchCart();
+    } else {
+      toast.error(res.error || "Failed to remove item");
+    }
+    setRemovingId(null);
+  };
+
+  const cartItems = cart?.packages || [];
+  const subtotal = cart?.total_price ?? cart?.price ?? 0;
+  const currency = cart?.currency || "USD";
 
   return (
     <AnimatePresence>
@@ -57,7 +76,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 </div>
                 <h2 className="text-[16px] font-semibold text-foreground">Your Cart</h2>
                 <span className="flex h-5 items-center rounded-full bg-primary/20 px-2 text-[11px] font-bold text-primary">
-                  {DUMMY_CART_ITEMS.length}
+                  {cartItems.length}
                 </span>
               </div>
               <button
@@ -70,7 +89,11 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
             {/* Cart Items */}
             <div className="flex-1 overflow-y-auto px-6 py-6">
-              {DUMMY_CART_ITEMS.length === 0 ? (
+              {loading && !cart ? (
+                <div className="flex h-full items-center justify-center">
+                  <Loader2 className="animate-spin text-muted-foreground" size={24} />
+                </div>
+              ) : cartItems.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center text-center">
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted text-muted-foreground">
                     <ShoppingBag size={24} />
@@ -86,30 +109,52 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 </div>
               ) : (
                 <div className="flex flex-col gap-6">
-                  {DUMMY_CART_ITEMS.map((item) => (
-                    <div key={item.id} className="flex items-center gap-4 group">
-                      <div className="relative h-16 w-16 overflow-hidden rounded-xl bg-muted border border-border shrink-0">
-                        <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                  {cartItems.map((item: any) => {
+                    const price = item.in_basket?.price ?? item.price ?? item.base_price ?? 0;
+                    const qty = item.in_basket?.quantity ?? item.qty ?? 1;
+                    
+                    return (
+                      <div key={item.id} className="flex items-center gap-4 group">
+                        <div className="relative h-16 w-16 overflow-hidden rounded-xl bg-muted border border-border shrink-0">
+                          {item.image ? (
+                            <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="h-full w-full bg-muted flex items-center justify-center">
+                              <ShoppingBag size={20} className="text-muted-foreground/50" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-[14px] font-semibold text-foreground truncate">{item.name}</h4>
+                          <p className="text-[13px] font-medium text-primary mt-0.5">
+                            {price === 0 ? "Free" : `${price.toFixed(2)} ${currency}`}
+                          </p>
+                          {qty > 1 && (
+                            <p className="text-[11px] text-muted-foreground mt-0.5">Qty: {qty}</p>
+                          )}
+                        </div>
+                        <button 
+                          onClick={() => handleRemove(item.id)}
+                          disabled={removingId === item.id}
+                          className="p-2 text-muted-foreground opacity-100 md:opacity-0 transition-all hover:text-destructive group-hover:opacity-100 disabled:opacity-50"
+                        >
+                          {removingId === item.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                        </button>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-[14px] font-semibold text-foreground truncate">{item.name}</h4>
-                        <p className="text-[13px] font-medium text-primary mt-0.5">${item.price.toFixed(2)}</p>
-                      </div>
-                      <button className="p-2 text-muted-foreground opacity-0 transition-all hover:text-destructive group-hover:opacity-100">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
 
             {/* Footer / Checkout */}
-            {DUMMY_CART_ITEMS.length > 0 && (
+            {cartItems.length > 0 && (
               <div className="border-t border-border bg-card p-6">
                 <div className="mb-4 flex items-center justify-between text-[14px]">
                   <span className="font-medium text-muted-foreground">Subtotal</span>
-                  <span className="font-bold text-foreground">${subtotal.toFixed(2)} USD</span>
+                  <span className="font-bold text-foreground">
+                    {subtotal === 0 ? "Free" : `${subtotal.toFixed(2)} ${currency}`}
+                  </span>
                 </div>
                 <p className="mb-6 text-[11px] text-muted-foreground">
                   Taxes and discounts are calculated at checkout. Powered by Tebex.

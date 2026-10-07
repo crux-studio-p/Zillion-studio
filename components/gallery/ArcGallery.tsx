@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAnimationFrame, useInView, useReducedMotion } from "motion/react";
 import { BlurWords } from "@/components/hero/BlurWords";
-import { GALLERY, PRODUCTS } from "@/lib/content";
+import { GALLERY, PRODUCTS as DEFAULT_PRODUCTS } from "@/lib/content";
 import { useGalleryLayout } from "./useGalleryLayout";
 
 const RADIUS = 12; // card corner radius
@@ -16,7 +16,14 @@ const SPEED = 4; // degrees per second, right to left.
 
 const wrap = (a: number) => ((((a + SPAN / 2) % SPAN) + SPAN) % SPAN) - SPAN / 2;
 
-export function ArcGallery() {
+export type GalleryProduct = {
+  category: string;
+  title: string;
+  image: string;
+  id?: number;
+};
+
+export function ArcGallery({ products }: { products?: GalleryProduct[] }) {
   const root = useRef<HTMLElement>(null);
   const cards = useRef<(HTMLAnchorElement | null)[]>([]);
   const offset = useRef(0); // degrees; decreases over time
@@ -28,6 +35,15 @@ export function ArcGallery() {
   const inView = useInView(root, { margin: "200px 0px" });
   const inViewRef = useRef(false);
   inViewRef.current = inView;
+
+  // Fallback to default products if no dynamic products are passed
+  const displayProducts = products && products.length > 0 
+    ? products 
+    : DEFAULT_PRODUCTS.map(p => ({
+        category: p.category,
+        title: p.title,
+        image: "/affiliate-program-bg.png", // Default image
+      }));
 
   const positionCards = useCallback(() => {
     if (!layout) return;
@@ -76,38 +92,42 @@ export function ArcGallery() {
             transform: `scale(${layout.k})`,
           }}
         >
-          {Array.from({ length: COUNT }, (_, i) => {
-            const p = PRODUCTS[i % PRODUCTS.length];
-            const dup = i >= PRODUCTS.length;
-            return (
-              <Link
-                key={i}
-                ref={(el) => {
-                  cards.current[i] = el;
-                }}
-                href={p.href}
-                aria-label={`${p.category}: ${p.title}`}
-                aria-hidden={dup || undefined}
-                tabIndex={dup ? -1 : undefined}
-                onPointerEnter={pause}
-                onPointerLeave={resume}
-                onFocus={pause}
-                onBlur={resume}
-                className="absolute left-0 top-0 block will-change-transform"
-                style={{ width: layout.card.w, height: layout.card.h }}
-              >
-                <span
-                  className="absolute inset-0 block overflow-hidden"
-                  style={{ borderRadius: RADIUS, background: p.fallback }}
-                >
-                  <Image src="/affiliate-program-bg.png" alt="" fill sizes="300px" className="object-cover" />
-                  <span className="absolute bottom-2.5 left-3 text-[10px] font-bold uppercase tracking-wide text-white drop-shadow-md z-10">
-                    {p.category}
-                  </span>
-                </span>
-              </Link>
-            );
-          })}
+          <div className="absolute inset-0 [mask-image:linear-gradient(to_bottom,black_80%,transparent_100%)]">
+            <div className="absolute inset-0 [mask-image:linear-gradient(to_right,transparent_0%,black_20%,black_80%,transparent_100%)]">
+              {Array.from({ length: COUNT }, (_, i) => {
+                const p = displayProducts[i % displayProducts.length];
+                const dup = i >= displayProducts.length;
+                return (
+                  <Link
+                    key={i}
+                    ref={(el) => {
+                      cards.current[i] = el;
+                    }}
+                    href={p.id ? `/store/package/${p.id}` : "#"}
+                    aria-label={`${p.category}: ${p.title}`}
+                    aria-hidden={dup || undefined}
+                    tabIndex={dup ? -1 : undefined}
+                    onPointerEnter={pause}
+                    onPointerLeave={resume}
+                    onFocus={pause}
+                    onBlur={resume}
+                    className="absolute left-0 top-0 block will-change-transform"
+                    style={{ width: layout.card.w, height: layout.card.h }}
+                  >
+                    <span
+                      className="absolute inset-0 block overflow-hidden bg-card"
+                      style={{ borderRadius: RADIUS }}
+                    >
+                      <Image src={p.image} alt={p.title} fill sizes="300px" className="object-cover" />
+                      <span className="absolute bottom-2.5 left-3 text-[10px] font-bold uppercase tracking-wide text-white drop-shadow-md z-10">
+                        {p.category}
+                      </span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
 
           <div
             className="absolute text-center flex flex-col items-center"

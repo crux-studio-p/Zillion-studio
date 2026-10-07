@@ -7,9 +7,9 @@ export type NavLink = { label: string; href: string; icon?: "chat" };
 export const NAV_LINKS: NavLink[] = [
   { label: "Home", href: "/" },
   { label: "Products", href: "/store" },
-  { label: "Bundle", href: "/bundle" },
+  { label: "Bundle", href: "/store" },
   { label: "Subscription", href: "/subscription" },
-  { label: "Free", href: "/free" },
+  { label: "Free", href: "/store" },
   { label: "Gift card", href: "/giftcard" },
   { label: "Affiliate program", href: "/affiliate-program" },
   { label: "Blog", href: "/blog" }
@@ -67,6 +67,7 @@ export type Product = {
   href: string;
   image?: string; // landscape, 16:9, e.g. /products/inventory.webp (1920x1080)
   fallback: string; // CSS background used until an image exists
+  price?: string; // e.g. "£14.99"
 };
 
 export const GALLERY = {
@@ -77,13 +78,13 @@ export const GALLERY = {
 
 // Hrefs are placeholders: point them at real product pages.
 export const PRODUCTS: Product[] = [
-  { category: "Script", title: "Product name", href: "/store/example", fallback: "linear-gradient(160deg,#8aa6c1,#2b3a55)" },
-  { category: "Tebex template", title: "Product name", href: "/store/example", fallback: "linear-gradient(160deg,#e8c9a0,#b0603a)" },
-  { category: "Script", title: "Product name", href: "/store/example", fallback: "linear-gradient(160deg,#9ec5a1,#2f5d3a)" },
-  { category: "Bundle", title: "Product name", href: "/store/example", fallback: "linear-gradient(160deg,#c9b8e8,#4b3a7a)" },
-  { category: "UI / HUD", title: "Product name", href: "/store/example", fallback: "linear-gradient(160deg,#f2d27a,#b5791c)" },
-  { category: "Script", title: "Product name", href: "/store/example", fallback: "linear-gradient(160deg,#f0a9a0,#8a2d2d)" },
-  { category: "Tebex template", title: "Product name", href: "/store/example", fallback: "linear-gradient(160deg,#a9d6e8,#1c5a7a)" },
+  { category: "Script", title: "Product name", href: "/store/example", fallback: "linear-gradient(160deg,#8aa6c1,#2b3a55)", price: "£14.99" },
+  { category: "Tebex template", title: "Product name", href: "/store/example", fallback: "linear-gradient(160deg,#e8c9a0,#b0603a)", price: "£29.99" },
+  { category: "Script", title: "Product name", href: "/store/example", fallback: "linear-gradient(160deg,#9ec5a1,#2f5d3a)", price: "£9.99" },
+  { category: "Bundle", title: "Product name", href: "/store/example", fallback: "linear-gradient(160deg,#c9b8e8,#4b3a7a)", price: "£49.99" },
+  { category: "UI / HUD", title: "Product name", href: "/store/example", fallback: "linear-gradient(160deg,#f2d27a,#b5791c)", price: "£19.99" },
+  { category: "Script", title: "Product name", href: "/store/example", fallback: "linear-gradient(160deg,#f0a9a0,#8a2d2d)", price: "£12.99" },
+  { category: "Tebex template", title: "Product name", href: "/store/example", fallback: "linear-gradient(160deg,#a9d6e8,#1c5a7a)", price: "£24.99" },
 ];
 
 export type Review = {

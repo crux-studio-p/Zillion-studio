@@ -12,7 +12,7 @@ import { useHeroLayout } from "./useHeroLayout";
 
 
 
-export default function Hero() {
+export default function Hero({ cards }: { cards?: { category: string; title: string; image: string }[] }) {
   const layout = useHeroLayout();
   const track = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: track, offset: ["start start", "end end"] });
@@ -36,10 +36,10 @@ export default function Hero() {
         className="relative text-foreground"
         style={{ height: "calc(100lvh + 1100px * var(--k, 1))" }}
       >
-        <div className="sticky top-0 overflow-hidden" style={{ height: "100lvh" }}>
+        <div className="sticky top-0 overflow-hidden [mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]" style={{ height: "100lvh" }}>
           {layout && (
             <Canvas layout={layout}>
-              <CardStack layout={layout} progress={scrollYProgress} />
+              <CardStack layout={layout} progress={scrollYProgress} cards={cards} />
               <SceneTwo
                 layout={layout}
                 show={sceneTwo}

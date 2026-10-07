@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Check, ShieldCheck, Star, ChevronRight, X, ShoppingBag } from "lucide-react";
@@ -9,6 +9,7 @@ import { Footer } from "@/components/footer/Footer";
 import { Faq } from "@/components/faq/Faq";
 import { motion, AnimatePresence, Variants } from "motion/react";
 import { submitReview, getApprovedReviews } from "@/lib/actions/review.actions";
+import { TebexPackage } from "@/lib/tebex";
 
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
@@ -27,43 +28,35 @@ const fadeUp: Variants = {
   },
 };
 
-// Mock data: In a real app, you'd fetch the product by ID
-const MOCK_PRODUCT = {
-  title: "Zillion Inventory UI",
-  category: "UI / HUD",
-  price: "£19.99",
-  fallback: "linear-gradient(160deg,#8aa6c1,#2b3a55)",
-  description:
-    "A meticulously crafted inventory system for FiveM. Featuring drag-and-drop mechanics, metadata support, weapon attachments, and a stunning glassmorphic interface that instantly elevates your server's production value.",
-  features: [
-    "Full source code access",
-    "Optimized 0.00ms resmon",
-    "Drag & drop functionality",
-    "Stash & trunk systems included",
-    "Built-in crafting system",
-  ],
-};
-
-export default function ProductDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
-  
+export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryName?: string } }) {
   const [productReviews, setProductReviews] = useState<any[]>([]);
   
   useEffect(() => {
-    getApprovedReviews(id).then(setProductReviews);
-  }, [id]);
+    getApprovedReviews(pkg.id.toString()).then(setProductReviews);
+  }, [pkg.id]);
 
-  const [activeIndex, setActiveIndex] = useState(1);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [reviewName, setReviewName] = useState("");
   const [reviewText, setReviewText] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
+
+  const priceDisplay = pkg.total_price === 0 ? "Free" : `$${pkg.total_price.toFixed(2)}`;
+  
+  const mediaUrls = pkg.media && pkg.media.length > 0 
+    ? pkg.media.filter(m => m.type === 'image').map(m => m.url) 
+    : (pkg.image ? [pkg.image] : []);
+
+  // Use dummy features for now, since they aren't provided as a list from Tebex
+  const features = [
+    "Full source code access",
+    "Optimized 0.00ms resmon",
+    "Drag & drop functionality",
+    "Stash & trunk systems included",
+    "Built-in crafting system",
+  ];
 
   return (
     <div className="flex min-h-screen flex-col bg-transparent text-foreground">
@@ -93,80 +86,87 @@ export default function ProductDetailPage({
               {/* Main Image Container */}
               <div className="relative w-full">
                 <div
-                  className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-3xl bg-muted shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                  className="relative flex w-full overflow-hidden rounded-3xl bg-muted shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
                 >
-                  <Image 
-                    src="/affiliate-program-bg.png" 
-                    alt="Product Preview" 
-                    fill 
-                    sizes="(max-width: 1024px) 100vw, 55vw"
-                    className="object-cover"
-                    style={{ filter: activeIndex !== 1 ? `hue-rotate(${activeIndex * 40}deg)` : 'none' }}
-                    priority
-                  />
+                  {mediaUrls.length > 0 ? (
+                    <img 
+                      src={mediaUrls[activeIndex]} 
+                      alt={pkg.name} 
+                      className="w-full h-auto block"
+                    />
+                  ) : (
+                    <div className="flex aspect-video w-full items-center justify-center text-muted-foreground text-sm font-medium">
+                      No Image
+                    </div>
+                  )}
                 </div>
                 
                 {/* Prev Button */}
-                <button 
-                  onClick={() => setActiveIndex((prev) => (prev === 1 ? 5 : prev - 1))}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-card text-foreground shadow-sm transition-transform hover:scale-105 active:scale-95"
-                  aria-label="Previous image"
-                >
-                  <ChevronRight size={18} strokeWidth={2.5} className="mr-0.5 rotate-180" />
-                </button>
+                {mediaUrls.length > 1 && (
+                  <button 
+                    onClick={() => setActiveIndex((prev) => (prev === 0 ? mediaUrls.length - 1 : prev - 1))}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-card text-foreground shadow-sm transition-transform hover:scale-105 active:scale-95"
+                    aria-label="Previous image"
+                  >
+                    <ChevronRight size={18} strokeWidth={2.5} className="mr-0.5 rotate-180" />
+                  </button>
+                )}
 
                 {/* Next Button */}
-                <button 
-                  onClick={() => setActiveIndex((prev) => (prev === 5 ? 1 : prev + 1))}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-card text-foreground shadow-sm transition-transform hover:scale-105 active:scale-95"
-                  aria-label="Next image"
-                >
-                  <ChevronRight size={18} strokeWidth={2.5} className="ml-0.5" />
-                </button>
+                {mediaUrls.length > 1 && (
+                  <button 
+                    onClick={() => setActiveIndex((prev) => (prev === mediaUrls.length - 1 ? 0 : prev + 1))}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-card text-foreground shadow-sm transition-transform hover:scale-105 active:scale-95"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight size={18} strokeWidth={2.5} className="ml-0.5" />
+                  </button>
+                )}
               </div>
               
               {/* Thumbnails */}
-              <div className="flex flex-wrap items-center justify-start gap-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveIndex(i)}
-                    className={`relative aspect-square w-16 overflow-hidden rounded-xl border-[2.5px] transition-all duration-300 ${
-                      i === activeIndex 
-                        ? "border-neutral-300 opacity-100" 
-                        : "border-transparent opacity-40 hover:opacity-80"
-                    }`}
-                  >
-                    <Image 
-                      src="/affiliate-program-bg.png" 
-                      alt={`Thumbnail ${i}`} 
-                      fill 
-                      sizes="64px"
-                      className="object-cover" 
-                      style={{ filter: i !== 1 ? `hue-rotate(${i * 40}deg)` : 'none' }}
-                    />
-                  </button>
-                ))}
-              </div>
+              {mediaUrls.length > 1 && (
+                <div className="flex flex-wrap items-center justify-start gap-3">
+                  {mediaUrls.map((url, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActiveIndex(i)}
+                      className={`relative aspect-square w-16 overflow-hidden rounded-xl border-[2.5px] transition-all duration-300 ${
+                        i === activeIndex 
+                          ? "border-neutral-300 opacity-100" 
+                          : "border-transparent opacity-40 hover:opacity-80"
+                      }`}
+                    >
+                      <img 
+                        src={url} 
+                        alt={`Thumbnail ${i}`} 
+                        className="w-full h-full object-cover" 
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </motion.div>
 
             {/* ── Right: Details & Checkout ── */}
             <motion.div variants={fadeUp} className="w-full lg:w-[45%] lg:pt-8">
               <span className="text-[11px] font-bold uppercase tracking-widest text-[#5cc8b8]">
-                {MOCK_PRODUCT.category}
+                {pkg.categoryName || "Package"}
               </span>
 
               <h1 className="mt-3 text-4xl font-semibold leading-[1.1] tracking-tight text-foreground md:text-5xl">
-                {MOCK_PRODUCT.title}
+                {pkg.name}
               </h1>
 
               <div className="mt-6 flex items-end gap-3">
                 <span className="text-3xl font-light tracking-tighter text-foreground">
-                  {MOCK_PRODUCT.price}
+                  {priceDisplay}
                 </span>
-                <span className="mb-1.5 text-[13px] text-muted-foreground">
-                  one-time payment
-                </span>
+                {pkg.total_price > 0 && (
+                  <span className="mb-1.5 text-[13px] text-muted-foreground">
+                    one-time payment
+                  </span>
+                )}
               </div>
 
               <div className="mt-10">
@@ -186,9 +186,10 @@ export default function ProductDetailPage({
                 <h3 className="text-[16px] font-semibold tracking-tight">
                   Overview
                 </h3>
-                <p className="mt-4 text-[14.5px] leading-relaxed text-muted-foreground">
-                  {MOCK_PRODUCT.description}
-                </p>
+                <div 
+                  className="mt-4 text-[14.5px] leading-relaxed text-muted-foreground prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: pkg.description }}
+                />
               </div>
 
               <div className="mt-12 rounded-2xl border border-border bg-muted p-6">
@@ -196,7 +197,7 @@ export default function ProductDetailPage({
                   What's included
                 </h3>
                 <ul className="mt-5 space-y-3">
-                  {MOCK_PRODUCT.features.map((feat, i) => (
+                  {features.map((feat, i) => (
                     <li
                       key={i}
                       className="flex items-start gap-3 text-[13.5px] text-muted-foreground"
@@ -331,7 +332,7 @@ export default function ProductDetailPage({
                       e.preventDefault();
                       startTransition(async () => {
                         const res = await submitReview({
-                          tebexPackageId: id,
+                          tebexPackageId: pkg.id.toString(),
                           name: reviewName,
                           text: reviewText,
                           rating: reviewRating,

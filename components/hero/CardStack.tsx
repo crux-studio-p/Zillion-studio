@@ -4,10 +4,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion, useTransform, type MotionValue, type Variants } from "motion/react";
 import { EASE_OUT, T } from "@/lib/hero-timing";
 import { HERO, STOPS, type Pose } from "@/lib/card-poses";
-import { CARDS } from "@/lib/content";
+import { CARDS as DEFAULT_CARDS } from "@/lib/content";
 import type { Layout } from "@/lib/hero-layout";
+import { preload } from "react-dom";
 
-const BACKGROUNDS = Array(7).fill("url(/affiliate-program-bg.png) center/cover");
+export type HeroCard = {
+  category: string;
+  title: string;
+  image: string;
+};
 
 function makeIntro(fan: Pose[]): Variants {
   return {
@@ -49,6 +54,7 @@ function Card({
   delta,
   intro,
   startSettled,
+  cardData,
 }: {
   i: number;
   layout: Layout;
@@ -57,7 +63,10 @@ function Card({
   delta: Delta;
   intro: Variants;
   startSettled: boolean;
+  cardData: HeroCard;
 }) {
+  // Highly optimized image preloading (Next.js automatically injects <link rel="preload"> in the <head>)
+  preload(cardData.image, { as: "image", fetchPriority: "high" });
   const x = useTransform(progress, STOPS, delta.x);
   const y = useTransform(progress, STOPS, delta.y);
   const rotate = useTransform(progress, STOPS, delta.rotate);
@@ -90,14 +99,14 @@ function Card({
         variants={intro}
         initial={startSettled ? "fanned" : "hidden"}
         animate={phase}
-        style={{ background: BACKGROUNDS[i] }}
+        style={{ background: `url(${cardData.image}) center/cover` }}
         role="img"
-        aria-label={`${CARDS[i].category}: ${CARDS[i].title}`}
-        className="absolute inset-0 rounded-2xl shadow-[0_20px_40px_-14px_rgba(0,0,0,0.35)]"
+        aria-label={`${cardData.category}: ${cardData.title}`}
+        className="absolute inset-0 rounded-2xl shadow-[0_20px_40px_-14px_rgba(0,0,0,0.35)] bg-card"
       >
         {i === HERO && (
           <span className="absolute bottom-3 left-3 text-[10px] font-semibold uppercase text-white/80">
-            {CARDS[i].category}
+            {cardData.category}
           </span>
         )}
       </motion.div>
@@ -105,8 +114,19 @@ function Card({
   );
 }
 
-export function CardStack({ layout, progress }: { layout: Layout; progress: MotionValue<number> }) {
+export function CardStack({ layout, progress, cards }: { layout: Layout; progress: MotionValue<number>; cards?: HeroCard[] }) {
   const reduce = useReducedMotion();
+  
+  // Use dynamic cards or fallback to defaults
+  const stackCards = useMemo(() => {
+    if (cards && cards.length >= 7) return cards.slice(0, 7);
+    return Array(7).fill(0).map((_, i) => ({
+      category: DEFAULT_CARDS[i]?.category || "Product",
+      title: DEFAULT_CARDS[i]?.title || "Title",
+      image: "/affiliate-program-bg.png",
+    }));
+  }, [cards]);
+
   const [phase, setPhase] = useState<Phase>("centered");
   const settled = useRef(false);
 
@@ -158,6 +178,7 @@ export function CardStack({ layout, progress }: { layout: Layout; progress: Moti
           delta={deltas[i]}
           intro={intro}
           startSettled={settled.current}
+          cardData={stackCards[i]}
         />
       ))}
     </div>
