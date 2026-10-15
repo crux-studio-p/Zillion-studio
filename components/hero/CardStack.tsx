@@ -1,9 +1,9 @@
 // components/hero/CardStack.tsx
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, useReducedMotion, useTransform, type MotionValue, type Variants } from "motion/react";
+import { motion, useReducedMotion, type Variants } from "motion/react";
 import { EASE_OUT, T } from "@/lib/hero-timing";
-import { HERO, STOPS, type Pose } from "@/lib/card-poses";
+import { HERO, type Pose } from "@/lib/card-poses";
 import { CARDS as DEFAULT_CARDS } from "@/lib/content";
 import type { Layout } from "@/lib/hero-layout";
 import { preload } from "react-dom";
@@ -44,14 +44,11 @@ function makeIntro(fan: Pose[]): Variants {
 }
 
 type Phase = "centered" | "stacked" | "fanned";
-type Delta = { x: number[]; y: number[]; rotate: number[]; rotateY: number[]; scale: number[] };
 
 function Card({
   i,
   layout,
   phase,
-  progress,
-  delta,
   intro,
   startSettled,
   cardData,
@@ -59,34 +56,20 @@ function Card({
   i: number;
   layout: Layout;
   phase: Phase;
-  progress: MotionValue<number>;
-  delta: Delta;
   intro: Variants;
   startSettled: boolean;
   cardData: HeroCard;
 }) {
   // Highly optimized image preloading (Next.js automatically injects <link rel="preload"> in the <head>)
   preload(cardData.image, { as: "image", fetchPriority: "high" });
-  const x = useTransform(progress, STOPS, delta.x);
-  const y = useTransform(progress, STOPS, delta.y);
-  const rotate = useTransform(progress, STOPS, delta.rotate);
-  const rotateY = useTransform(progress, STOPS, delta.rotateY);
-  const scale = useTransform(progress, STOPS, delta.scale);
 
   const { w, h } = layout.card;
   const halfX = w / 2;
-  const halfY = h / 2;
 
   return (
-    <motion.div
+    <div
       style={{
-        x,
-        y,
-        rotate,
-        rotateY,
-        scale,
         zIndex: i,
-        transformOrigin: `${halfX + layout.fan[i].x}px ${halfY + layout.fan[i].y}px`,
         transformStyle: "preserve-3d",
         width: w,
         height: h,
@@ -110,11 +93,11 @@ function Card({
           </span>
         )}
       </motion.div>
-    </motion.div>
+    </div>
   );
 }
 
-export function CardStack({ layout, progress, cards }: { layout: Layout; progress: MotionValue<number>; cards?: HeroCard[] }) {
+export function CardStack({ layout, cards }: { layout: Layout; cards?: HeroCard[] }) {
   const reduce = useReducedMotion();
   
   // Use dynamic cards or fallback to defaults
@@ -130,20 +113,7 @@ export function CardStack({ layout, progress, cards }: { layout: Layout; progres
   const [phase, setPhase] = useState<Phase>("centered");
   const settled = useRef(false);
 
-  /* eslint-disable react-hooks/exhaustive-deps */
   const intro = useMemo(() => makeIntro(layout.fan), [layout.key]);
-  const deltas = useMemo<Delta[]>(
-    () =>
-      layout.fan.map((fan, i) => ({
-        x: layout.stages.map((s) => s[i].x - fan.x),
-        y: layout.stages.map((s) => s[i].y - fan.y),
-        rotate: layout.stages.map((s) => s[i].rotate - fan.rotate),
-        rotateY: layout.stages.map((s) => s[i].rotateY - fan.rotateY),
-        scale: layout.stages.map((s) => s[i].scale),
-      })),
-    [layout.key],
-  );
-  /* eslint-enable react-hooks/exhaustive-deps */
 
   useEffect(() => {
     if (reduce) {
@@ -174,8 +144,6 @@ export function CardStack({ layout, progress, cards }: { layout: Layout; progres
           i={i}
           layout={layout}
           phase={phase}
-          progress={progress}
-          delta={deltas[i]}
           intro={intro}
           startSettled={settled.current}
           cardData={stackCards[i]}

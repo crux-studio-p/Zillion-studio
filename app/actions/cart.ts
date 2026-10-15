@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { addPackageToBasket, createBasket, getAuthUrls, updatePackageQuantity, TEBEX_PUBLIC_TOKEN } from "@/lib/tebex";
+import { addPackageToBasket, createBasket, getAuthUrls, updatePackageQuantity, getBasket, TEBEX_PUBLIC_TOKEN } from "@/lib/tebex";
 
 /**
  * Retrieves the current basket identifier from cookies, or creates a new one.
@@ -10,6 +10,14 @@ import { addPackageToBasket, createBasket, getAuthUrls, updatePackageQuantity, T
 async function getOrCreateBasketIdent(): Promise<string> {
   const cookieStore = await cookies();
   let basketIdent = cookieStore.get("tebex_basket")?.value;
+
+  if (basketIdent) {
+    const basket = await getBasket(basketIdent);
+    if (!basket) {
+      basketIdent = undefined;
+      cookieStore.delete("tebex_basket");
+    }
+  }
 
   if (!basketIdent) {
     const basket = await createBasket();
@@ -33,8 +41,16 @@ async function getOrCreateBasketIdent(): Promise<string> {
 
 export async function addToCart(packageId: number) {
   try {
-    const basketIdent = await getOrCreateBasketIdent();
-    await addPackageToBasket(basketIdent, packageId, 1);
+    let basketIdent = await getOrCreateBasketIdent();
+    try {
+      await addPackageToBasket(basketIdent, packageId, 1);
+    } catch {
+      // In case basket became invalid, recreate and retry once
+      const cookieStore = await cookies();
+      cookieStore.delete("tebex_basket");
+      basketIdent = await getOrCreateBasketIdent();
+      await addPackageToBasket(basketIdent, packageId, 1);
+    }
     
     revalidatePath("/", "layout"); // Revalidate layout to update cart UI everywhere
     
@@ -83,16 +99,13 @@ export async function getCart() {
       return null;
     }
 
-    const res = await fetch(`https://headless.tebex.io/api/accounts/${TEBEX_PUBLIC_TOKEN}/baskets/${basketIdent}`, {
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
+    const basket = await getBasket(basketIdent);
+    if (!basket) {
+      cookieStore.delete("tebex_basket");
       return null;
     }
 
-    const json = await res.json();
-    return json.data;
+    return basket;
   } catch (error: any) {
     if (error?.digest === 'DYNAMIC_SERVER_USAGE') {
       throw error;

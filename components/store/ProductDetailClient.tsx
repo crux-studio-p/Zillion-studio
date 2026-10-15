@@ -1,15 +1,33 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useMemo } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowLeft, Check, ShieldCheck, Star, ChevronRight, X, ShoppingBag } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Check, 
+  ShieldCheck, 
+  Star, 
+  ChevronRight, 
+  X, 
+  ShoppingBag, 
+  Plus, 
+  Layers, 
+  History, 
+  HelpCircle,
+  Loader2,
+  Calendar,
+  Tag
+} from "lucide-react";
 import { Nav } from "@/components/hero/Nav";
 import { Footer } from "@/components/footer/Footer";
 import { Faq } from "@/components/faq/Faq";
 import { motion, AnimatePresence, Variants } from "motion/react";
 import { submitReview, getApprovedReviews } from "@/lib/actions/review.actions";
+import { addToCart } from "@/app/actions/cart";
+import { toast } from "sonner";
 import { TebexPackage } from "@/lib/tebex";
+import { parsePackageDescription } from "@/lib/parsers/description-parser";
+import { EASE_OUT } from "@/lib/hero-timing";
 
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
@@ -30,7 +48,15 @@ const fadeUp: Variants = {
 
 export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryName?: string } }) {
   const [productReviews, setProductReviews] = useState<any[]>([]);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+  const [openChangelogIndex, setOpenChangelogIndex] = useState<number | null>(0);
   
+  // Parse description content into structured sections
+  const parsed = useMemo(() => {
+    return parsePackageDescription(pkg.description || "");
+  }, [pkg.description]);
+
   useEffect(() => {
     getApprovedReviews(pkg.id.toString()).then(setProductReviews);
   }, [pkg.id]);
@@ -43,20 +69,56 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
   const [reviewText, setReviewText] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
 
-  const priceDisplay = pkg.total_price === 0 ? "Free" : `$${pkg.total_price.toFixed(2)}`;
+  const currencySymbol = pkg.currency === "EUR" ? "€" : pkg.currency === "GBP" ? "£" : "$";
+  const priceDisplay = pkg.total_price === 0 ? "Free" : `${currencySymbol}${pkg.total_price.toFixed(2)}`;
   
   const mediaUrls = pkg.media && pkg.media.length > 0 
-    ? pkg.media.filter(m => m.type === 'image').map(m => m.url) 
+    ? pkg.media.filter(m => m.type === "image").map(m => m.url) 
     : (pkg.image ? [pkg.image] : []);
 
-  // Use dummy features for now, since they aren't provided as a list from Tebex
-  const features = [
+  // Features: use parsed features if present, otherwise fallback
+  const features = parsed.features.length > 0 ? parsed.features : [
     "Full source code access",
     "Optimized 0.00ms resmon",
     "Drag & drop functionality",
     "Stash & trunk systems included",
     "Built-in crafting system",
   ];
+
+  // Combine description parsed reviews with DB approved reviews
+  const allReviews = useMemo(() => {
+    const fromDescription = parsed.reviews.map((r, i) => ({
+      id: `desc-${i}`,
+      name: r.author,
+      text: r.bodyHtml.replace(/<[^>]*>/g, ""),
+      rating: r.rating || 5,
+      createdAt: r.date ? new Date(r.date) : new Date(),
+      isCurated: true,
+    }));
+    return [...fromDescription, ...productReviews];
+  }, [parsed.reviews, productReviews]);
+
+  const reviewScore = useMemo(() => {
+    if (allReviews.length === 0) return 5;
+    const sum = allReviews.reduce((acc, r) => acc + (r.rating || 5), 0);
+    return Number((sum / allReviews.length).toFixed(1));
+  }, [allReviews]);
+
+  const handleAddToCart = async () => {
+    try {
+      setIsAddingToCart(true);
+      const res = await addToCart(pkg.id);
+      if (res.success) {
+        toast.success(`"${pkg.name}" added to cart!`);
+      } else {
+        toast.error(res.error || "Failed to add to cart");
+      }
+    } catch {
+      toast.error("An error occurred while adding to cart");
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-transparent text-foreground">
@@ -72,10 +134,10 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
           {/* Breadcrumb */}
           <motion.div variants={fadeUp}>
             <Link
-            href="/store"
-            className="mb-10 inline-flex items-center gap-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-neutral-900"
-          >
-            <ArrowLeft size={14} /> Back to store
+              href="/store"
+              className="mb-10 inline-flex items-center gap-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft size={14} /> Back to store
             </Link>
           </motion.div>
 
@@ -92,7 +154,7 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                     <img 
                       src={mediaUrls[activeIndex]} 
                       alt={pkg.name} 
-                      className="w-full h-auto block"
+                      className="w-full h-auto block object-cover"
                     />
                   ) : (
                     <div className="flex aspect-video w-full items-center justify-center text-muted-foreground text-sm font-medium">
@@ -105,7 +167,7 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                 {mediaUrls.length > 1 && (
                   <button 
                     onClick={() => setActiveIndex((prev) => (prev === 0 ? mediaUrls.length - 1 : prev - 1))}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-card text-foreground shadow-sm transition-transform hover:scale-105 active:scale-95"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-card/90 backdrop-blur-sm text-foreground shadow-sm transition-transform hover:scale-105 active:scale-95"
                     aria-label="Previous image"
                   >
                     <ChevronRight size={18} strokeWidth={2.5} className="mr-0.5 rotate-180" />
@@ -116,7 +178,7 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                 {mediaUrls.length > 1 && (
                   <button 
                     onClick={() => setActiveIndex((prev) => (prev === mediaUrls.length - 1 ? 0 : prev + 1))}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-card text-foreground shadow-sm transition-transform hover:scale-105 active:scale-95"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-card/90 backdrop-blur-sm text-foreground shadow-sm transition-transform hover:scale-105 active:scale-95"
                     aria-label="Next image"
                   >
                     <ChevronRight size={18} strokeWidth={2.5} className="ml-0.5" />
@@ -133,7 +195,7 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                       onClick={() => setActiveIndex(i)}
                       className={`relative aspect-square w-16 overflow-hidden rounded-xl border-[2.5px] transition-all duration-300 ${
                         i === activeIndex 
-                          ? "border-neutral-300 opacity-100" 
+                          ? "border-primary opacity-100 scale-105" 
                           : "border-transparent opacity-40 hover:opacity-80"
                       }`}
                     >
@@ -149,15 +211,50 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
             </motion.div>
 
             {/* ── Right: Details & Checkout ── */}
-            <motion.div variants={fadeUp} className="w-full lg:w-[45%] lg:pt-8">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-[#5cc8b8]">
-                {pkg.categoryName || "Package"}
-              </span>
+            <motion.div variants={fadeUp} className="w-full lg:w-[45%] lg:pt-4">
+              
+              {/* Badges Bar (Category, Version, Updated) */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-primary">
+                  {pkg.categoryName || "Package"}
+                </span>
 
-              <h1 className="mt-3 text-4xl font-semibold leading-[1.1] tracking-tight text-foreground md:text-5xl">
+                {parsed.version && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary border border-primary/20">
+                    <Tag size={10} />
+                    {parsed.version}
+                  </span>
+                )}
+
+                {parsed.lastUpdated && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                    <Calendar size={11} />
+                    {parsed.lastUpdated}
+                  </span>
+                )}
+              </div>
+
+              {/* Title */}
+              <h1 className="mt-3 text-4xl font-semibold leading-[1.15] tracking-tight text-foreground md:text-5xl">
                 {pkg.name}
               </h1>
 
+              {/* Framework Badges */}
+              {parsed.compat.frameworks.length > 0 && (
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <span className="text-[12px] font-medium text-muted-foreground">Compatible with:</span>
+                  {parsed.compat.frameworks.map((fw) => (
+                    <span
+                      key={fw}
+                      className="rounded-lg bg-muted px-2.5 py-1 text-[11px] font-semibold text-foreground border border-border shadow-xs"
+                    >
+                      {fw}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Price */}
               <div className="mt-6 flex items-end gap-3">
                 <span className="text-3xl font-light tracking-tighter text-foreground">
                   {priceDisplay}
@@ -169,31 +266,47 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                 )}
               </div>
 
-              <div className="mt-10">
-                <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-[14px] font-bold text-primary-foreground shadow-lg transition-transform hover:-translate-y-[2px] active:translate-y-0 active:scale-[0.98]">
-                  <ShoppingBag size={18} />
-                  Add to Cart
+              {/* Add to Cart Button */}
+              <div className="mt-8">
+                <button 
+                  onClick={handleAddToCart}
+                  disabled={isAddingToCart}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-[14px] font-bold text-primary-foreground shadow-lg shadow-primary/15 transition-transform hover:-translate-y-[2px] active:translate-y-0 active:scale-[0.98] disabled:opacity-70 disabled:hover:translate-y-0"
+                >
+                  {isAddingToCart ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Adding to Cart...
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingBag size={18} />
+                      Add to Cart
+                    </>
+                  )}
                 </button>
                 <div className="mt-4 flex items-center justify-center gap-2 text-[12px] text-muted-foreground">
                   <ShieldCheck size={14} className="text-primary" />
-                  Secure checkout, instant delivery to your email.
+                  Secure checkout powered by Tebex • Instant delivery
                 </div>
               </div>
 
-              <div className="mt-14 h-px w-full bg-black/5" />
+              <div className="mt-10 h-px w-full bg-border" />
 
-              <div className="mt-14">
-                <h3 className="text-[16px] font-semibold tracking-tight">
+              {/* Overview Section */}
+              <div className="mt-10">
+                <h3 className="text-[16px] font-semibold tracking-tight text-foreground">
                   Overview
                 </h3>
                 <div 
                   className="mt-4 text-[14.5px] leading-relaxed text-muted-foreground prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: pkg.description }}
+                  dangerouslySetInnerHTML={{ __html: parsed.descriptionHtml || pkg.description }}
                 />
               </div>
 
-              <div className="mt-12 rounded-2xl border border-border bg-muted p-6">
-                <h3 className="text-[14px] font-semibold tracking-tight">
+              {/* Features List ("What's included") */}
+              <div className="mt-10 rounded-2xl border border-border bg-muted/60 p-6 backdrop-blur-xs">
+                <h3 className="text-[14px] font-semibold tracking-tight text-foreground">
                   What's included
                 </h3>
                 <ul className="mt-5 space-y-3">
@@ -202,7 +315,7 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                       key={i}
                       className="flex items-start gap-3 text-[13.5px] text-muted-foreground"
                     >
-                      <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#5cc8b8]/20 text-[#298f80]">
+                      <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
                         <Check size={10} strokeWidth={3} />
                       </div>
                       {feat}
@@ -210,21 +323,186 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                   ))}
                 </ul>
               </div>
+
+              {/* Dependencies Card (if any) */}
+              {parsed.compat.dependencies.length > 0 && (
+                <div className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <Layers size={16} className="text-primary" />
+                    <h3 className="text-[14px] font-semibold tracking-tight text-foreground">
+                      Dependencies & Requirements
+                    </h3>
+                  </div>
+                  <div className="mt-3.5 flex flex-wrap gap-2">
+                    {parsed.compat.dependencies.map((dep, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 rounded-xl bg-muted px-3 py-1.5 text-[12px] border border-border"
+                      >
+                        <span className="font-semibold text-foreground">{dep.name}</span>
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            dep.required
+                              ? "bg-red-500/10 text-red-500 border border-red-500/20"
+                              : "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                          }`}
+                        >
+                          {dep.required ? "Required" : "Optional"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
             </motion.div>
           </div>
 
+          {/* ── Product Changelog / Release History Section ── */}
+          {parsed.changelog.length > 0 && (
+            <motion.div variants={fadeUp} className="mt-28">
+              <div className="mb-8 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-primary">
+                    <History size={18} />
+                    <span className="text-[12px] font-bold uppercase tracking-widest">Version History</span>
+                  </div>
+                  <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+                    Release Changelog
+                  </h2>
+                </div>
+                <span className="text-[13px] font-medium text-muted-foreground">
+                  Latest: {parsed.version}
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {parsed.changelog.map((entry, idx) => {
+                  const isOpen = openChangelogIndex === idx;
+                  return (
+                    <div 
+                      key={idx}
+                      className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs transition-colors"
+                    >
+                      <button
+                        onClick={() => setOpenChangelogIndex(isOpen ? null : idx)}
+                        className="flex w-full items-center justify-between p-5 text-left"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-[13px] font-bold text-primary border border-primary/20">
+                            {entry.version}
+                          </span>
+                          {entry.date && (
+                            <span className="text-[13px] text-muted-foreground">
+                              {entry.date}
+                            </span>
+                          )}
+                        </div>
+                        <ChevronRight 
+                          size={18} 
+                          className={`text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`} 
+                        />
+                      </button>
+
+                      <AnimatePresence initial={false}>
+                        {isOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1, transition: { duration: 0.25, ease: EASE_OUT } }}
+                            exit={{ height: 0, opacity: 0, transition: { duration: 0.15 } }}
+                            className="overflow-hidden border-t border-border bg-muted/30 px-6 py-4"
+                          >
+                            {entry.changes.length > 0 ? (
+                              <ul className="space-y-2">
+                                {entry.changes.map((change, cIdx) => (
+                                  <li key={cIdx} className="flex items-start gap-2.5 text-[13.5px] text-muted-foreground">
+                                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                                    <span>{change}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <div 
+                                className="text-[13.5px] text-muted-foreground prose prose-sm max-w-none"
+                                dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
+                              />
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── Product-Specific FAQ Section (if specified in package) ── */}
+          {parsed.faq.length > 0 && (
+            <motion.div variants={fadeUp} className="mt-28">
+              <div className="mb-8">
+                <div className="flex items-center gap-2 text-primary">
+                  <HelpCircle size={18} />
+                  <span className="text-[12px] font-bold uppercase tracking-widest">Product FAQ</span>
+                </div>
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+                  Frequently Asked Questions
+                </h2>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-xs divide-y divide-border">
+                {parsed.faq.map((item, idx) => {
+                  const isOpen = openFaqIndex === idx;
+                  return (
+                    <div key={idx} className="py-4 first:pt-0 last:pb-0">
+                      <button
+                        onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                        className="flex w-full items-center justify-between gap-4 text-left font-medium text-[15px] text-foreground hover:text-primary transition-colors"
+                      >
+                        <span>{item.question}</span>
+                        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+                          <Plus size={14} className={`transition-transform duration-200 ${isOpen ? "rotate-45" : ""}`} />
+                        </span>
+                      </button>
+
+                      <AnimatePresence initial={false}>
+                        {isOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1, transition: { duration: 0.25, ease: EASE_OUT } }}
+                            exit={{ height: 0, opacity: 0, transition: { duration: 0.15 } }}
+                            className="overflow-hidden pt-3 text-[13.5px] leading-relaxed text-muted-foreground"
+                          >
+                            <div dangerouslySetInnerHTML={{ __html: item.answerHtml }} />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
           {/* ── Product Reviews Section ── */}
-          <motion.div variants={fadeUp} className="mt-32">
+          <motion.div variants={fadeUp} className="mt-28">
             <div className="mb-10 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight">Customer Reviews</h2>
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex gap-0.5 text-yellow-400">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} size={14} fill="currentColor" />
+                      <Star 
+                        key={i} 
+                        size={14} 
+                        fill={i < Math.round(reviewScore) ? "currentColor" : "none"} 
+                        className={i >= Math.round(reviewScore) ? "text-neutral-600" : ""}
+                      />
                     ))}
                   </div>
-                  <span className="text-[13px] font-medium text-muted-foreground">Based on {productReviews.length} reviews</span>
+                  <span className="text-[13px] font-medium text-muted-foreground">
+                    {reviewScore} / 5 • Based on {allReviews.length} {allReviews.length === 1 ? "review" : "reviews"}
+                  </span>
                 </div>
               </div>
               <button 
@@ -232,22 +510,34 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                   setIsSuccess(false);
                   setIsReviewModalOpen(true);
                 }}
-                className="rounded-full border border-border px-4 py-2 text-[12px] font-semibold transition-colors hover:bg-black/5"
+                className="rounded-full border border-border bg-card px-4 py-2 text-[12px] font-semibold text-foreground transition-all hover:bg-muted shadow-xs hover:scale-105 active:scale-95"
               >
                 Write a review
               </button>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {productReviews.length === 0 ? (
+              {allReviews.length === 0 ? (
                 <p className="text-[13px] text-muted-foreground col-span-full">No reviews yet. Be the first to review!</p>
               ) : (
-                productReviews.map((review) => (
-                  <div key={review.id} className="flex flex-col rounded-2xl border border-border bg-card p-6 shadow-sm">
-                    <div className="flex gap-0.5 text-yellow-400 mb-4">
-                      {[...Array(5)].map((_, idx) => (
-                        <Star key={idx} size={12} fill={idx < review.rating ? "currentColor" : "none"} className={idx >= review.rating ? "text-neutral-700" : ""} />
-                      ))}
+                allReviews.map((review) => (
+                  <div key={review.id} className="flex flex-col rounded-2xl border border-border bg-card p-6 shadow-xs">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex gap-0.5 text-yellow-400">
+                        {[...Array(5)].map((_, idx) => (
+                          <Star 
+                            key={idx} 
+                            size={12} 
+                            fill={idx < review.rating ? "currentColor" : "none"} 
+                            className={idx >= review.rating ? "text-neutral-700" : ""} 
+                          />
+                        ))}
+                      </div>
+                      {review.isCurated && (
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                          Verified Buyer
+                        </span>
+                      )}
                     </div>
                     <p className="flex-1 text-[13.5px] leading-relaxed text-muted-foreground">
                       "{review.text}"
@@ -270,6 +560,7 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
         </motion.div>
       </main>
 
+      {/* Global Store FAQ */}
       <Faq />
       <Footer />
 
@@ -366,7 +657,7 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                             key={star} 
                             type="button" 
                             onClick={() => setReviewRating(star)}
-                            className={`hover:scale-110 transition-transform ${star <= reviewRating ? 'text-yellow-400' : 'text-muted'}`}
+                            className={`hover:scale-110 transition-transform ${star <= reviewRating ? "text-yellow-400" : "text-muted"}`}
                           >
                             <Star size={24} fill="currentColor" />
                           </button>

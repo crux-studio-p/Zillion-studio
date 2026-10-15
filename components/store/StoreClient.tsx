@@ -7,6 +7,7 @@ import { Footer } from "@/components/footer/Footer";
 import { motion, Variants } from "motion/react";
 import { TebexCategory } from "@/lib/tebex";
 import { AddToCartButton } from "./AddToCartButton";
+import { parsePackageDescription } from "@/lib/parsers/description-parser";
 
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
@@ -104,17 +105,48 @@ export function StoreClient({ categories }: { categories: TebexCategory[] }) {
                   {/* Product Info */}
                   <div className="flex flex-col px-1">
                     <div className="flex items-start justify-between gap-4">
-                      <Link href={`/store/${slugify(p.name)}-${p.id}`}>
-                        <h3 className="text-[18px] font-bold tracking-tight text-foreground leading-snug group-hover:text-primary transition-colors">
+                      <Link href={`/store/${slugify(p.name)}-${p.id}`} className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                          <span className="text-[12px] font-semibold text-primary uppercase tracking-wide">
+                            {p.categoryName}
+                          </span>
+                          {(() => {
+                            const parsed = parsePackageDescription(p.description || "");
+                            if (parsed.version) {
+                              return (
+                                <span className="rounded-full bg-primary/10 px-2 py-0.2 text-[10px] font-bold text-primary border border-primary/20">
+                                  {parsed.version}
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                        <h3 className="text-[17px] font-bold tracking-tight text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
                           {p.name}
                         </h3>
-                        <p className="mt-1 text-[13px] font-semibold text-muted-foreground tracking-wide uppercase">
-                          {p.categoryName}
-                        </p>
+                        {(() => {
+                          const parsed = parsePackageDescription(p.description || "");
+                          if (parsed.compat.frameworks.length > 0) {
+                            return (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {parsed.compat.frameworks.map((fw) => (
+                                  <span
+                                    key={fw}
+                                    className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground border border-border"
+                                  >
+                                    {fw}
+                                  </span>
+                                ))}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </Link>
-                      <div className="shrink-0 flex items-center gap-3 pt-0.5">
-                        <span className="text-[20px] md:text-[22px] font-normal tracking-tight text-foreground transition-colors duration-300 group-hover:text-primary">
-                          {p.total_price === 0 ? "Free" : `$${p.total_price.toFixed(2)}`}
+                      <div className="shrink-0 flex items-center gap-2 pt-0.5">
+                        <span className="text-[18px] md:text-[20px] font-normal tracking-tight text-foreground transition-colors duration-300 group-hover:text-primary">
+                          {p.total_price === 0 ? "Free" : `${p.currency === "EUR" ? "€" : p.currency === "GBP" ? "£" : "$"}${p.total_price.toFixed(2)}`}
                         </span>
                         <AddToCartButton packageId={p.id} />
                       </div>
