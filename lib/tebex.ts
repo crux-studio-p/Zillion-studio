@@ -132,8 +132,16 @@ export async function addPackageToBasket(ident: string, packageId: number, quant
   });
 
   if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Failed to add package to basket: ${errorText}`);
+    const raw = await res.text();
+    let detail = raw;
+    try {
+      const parsed = JSON.parse(raw);
+      detail = parsed.detail || parsed.message || parsed.title || raw;
+    } catch {}
+    const err = new Error(detail);
+    (err as any).status = res.status;
+    (err as any).raw = raw;
+    throw err;
   }
 
   const json = await res.json();

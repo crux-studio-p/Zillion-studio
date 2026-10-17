@@ -39,25 +39,57 @@ async function getOrCreateBasketIdent(): Promise<string> {
   return basketIdent;
 }
 
-export async function addToCart(packageId: number) {
+export async function addToCart(packageId: number, returnUrl?: string) {
   try {
     let basketIdent = await getOrCreateBasketIdent();
     try {
       await addPackageToBasket(basketIdent, packageId, 1);
-    } catch {
-      // In case basket became invalid, recreate and retry once
-      const cookieStore = await cookies();
-      cookieStore.delete("tebex_basket");
-      basketIdent = await getOrCreateBasketIdent();
-      await addPackageToBasket(basketIdent, packageId, 1);
+    } catch (err: any) {
+      const isLoginRequired =
+        err?.status === 422 &&
+        (err?.message?.toLowerCase().includes("login") || err?.raw?.toLowerCase().includes("login"));
+
+      if (isLoginRequired) {
+        let authUrl: string | undefined;
+        try {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+          const returnTarget = returnUrl
+            ? (returnUrl.startsWith("http") ? returnUrl : `${appUrl}${returnUrl.startsWith("/") ? "" : "/"}${returnUrl}`)
+            : `${appUrl}/store`;
+
+          const authUrls = await getAuthUrls(basketIdent, returnTarget);
+          if (authUrls && authUrls.length > 0) {
+            authUrl = authUrls[0].url;
+          }
+        } catch (authErr) {
+          console.error("Failed to generate auth url:", authErr);
+        }
+
+        return {
+          success: false,
+          requiresAuth: true,
+          authUrl: authUrl || `/api/auth/login?returnUrl=${encodeURIComponent(returnUrl || "/store")}`,
+          error: "Please sign in with FiveM to add items to your cart.",
+        };
+      }
+
+      // In case basket became invalid (e.g. 404/410), recreate and retry once
+      if (err?.status === 404 || err?.status === 410) {
+        const cookieStore = await cookies();
+        cookieStore.delete("tebex_basket");
+        basketIdent = await getOrCreateBasketIdent();
+        await addPackageToBasket(basketIdent, packageId, 1);
+      } else {
+        throw err;
+      }
     }
     
     revalidatePath("/", "layout"); // Revalidate layout to update cart UI everywhere
     
     return { success: true };
   } catch (error: any) {
-    console.error("Failed to add to cart:", error);
-    return { success: false, error: error.message };
+    console.error("Failed to add to cart:", error.message || error);
+    return { success: false, error: error.message || "Failed to add to cart" };
   }
 }
 

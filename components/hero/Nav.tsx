@@ -27,6 +27,13 @@ export function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<{username?: string, id?: string} | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [currentPath, setCurrentPath] = useState("/store");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentPath(window.location.pathname + window.location.search);
+    }
+  }, []);
 
   useEffect(() => {
     fetch("/api/auth/session")
@@ -143,7 +150,7 @@ export function Nav() {
                   </div>
                 ) : (
                   <motion.a
-                    href="/api/auth/login"
+                    href={`/api/auth/login?returnUrl=${encodeURIComponent(currentPath)}`}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: T.nav + 0.05, duration: 0.5, ease: EASE_OUT }}
@@ -233,7 +240,7 @@ export function Nav() {
                   Logout
                 </a>
               ) : (
-                <a href="/api/auth/login" className="flex h-11 flex-1 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground shadow-sm">
+                <a href={`/api/auth/login?returnUrl=${encodeURIComponent(currentPath)}`} className="flex h-11 flex-1 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground shadow-sm">
                   Login
                 </a>
               )}

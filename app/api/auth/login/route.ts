@@ -25,7 +25,12 @@ export async function GET(request: Request) {
       throw new Error("Could not create or find basket ident");
     }
 
-    const returnUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const { searchParams } = new URL(request.url);
+    const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin || "http://localhost:3000";
+    const returnParam = searchParams.get("returnUrl");
+    const returnUrl = returnParam 
+      ? (returnParam.startsWith("http") ? returnParam : `${origin}${returnParam.startsWith("/") ? "" : "/"}${returnParam}`)
+      : `${origin}/store`;
     
     // Fetch authentication links
     let authUrls: any[];

@@ -107,9 +107,21 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
   const handleAddToCart = async () => {
     try {
       setIsAddingToCart(true);
-      const res = await addToCart(pkg.id);
+      const currentPath = typeof window !== "undefined" ? window.location.pathname : "/store";
+      const res = await addToCart(pkg.id, currentPath);
       if (res.success) {
         toast.success(`"${pkg.name}" added to cart!`);
+      } else if (res.requiresAuth) {
+        toast.error("FiveM Login Required", {
+          description: "Connect your FiveM / Cfx.re account to add items to your cart.",
+          action: {
+            label: "Sign In",
+            onClick: () => {
+              window.location.href = res.authUrl || `/api/auth/login?returnUrl=${encodeURIComponent(currentPath)}`;
+            },
+          },
+          duration: 7000,
+        });
       } else {
         toast.error(res.error || "Failed to add to cart");
       }
