@@ -33,20 +33,23 @@ export async function createBasket(): Promise<any> {
 }
 
 /**
- * Retrieves an existing basket by its identifier.
+ * Retrieves an existing basket by its identifier. Returns null if not found or expired.
  */
-export async function getBasket(ident: string): Promise<any> {
+export async function getBasket(ident: string): Promise<any | null> {
   const res = await fetch(`https://headless.tebex.io/api/accounts/${TEBEX_PUBLIC_TOKEN}/baskets/${ident}`, {
     cache: "no-store",
   });
 
   if (!res.ok) {
-    throw new Error(`Failed to fetch basket ${ident}`);
+    if (res.status === 404 || res.status === 422 || res.status === 410) {
+      return null;
+    }
+    const errorText = await res.text();
+    console.warn(`Failed to fetch basket ${ident} (${res.status}): ${errorText}`);
+    return null;
   }
 
   const json = await res.json();
-  console.log(`=== Tebex getBasket (${ident}) Response ===`);
-  console.log(JSON.stringify(json, null, 2));
   return json.data;
 }
 
@@ -67,8 +70,6 @@ export async function getAuthUrls(ident: string, returnUrl: string): Promise<any
   }
 
   const json = await res.json();
-  console.log(`=== Tebex getAuthUrls (${ident}) Response ===`);
-  console.log(JSON.stringify(json, null, 2));
   return json;
 }
 
@@ -131,8 +132,16 @@ export async function addPackageToBasket(ident: string, packageId: number, quant
   });
 
   if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Failed to add package to basket: ${errorText}`);
+    const raw = await res.text();
+    let detail = raw;
+    try {
+      const parsed = JSON.parse(raw);
+      detail = parsed.detail || parsed.message || parsed.title || raw;
+    } catch {}
+    const err = new Error(detail);
+    (err as any).status = res.status;
+    (err as any).raw = raw;
+    throw err;
   }
 
   const json = await res.json();

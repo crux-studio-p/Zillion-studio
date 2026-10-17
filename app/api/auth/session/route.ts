@@ -13,6 +13,12 @@ export async function GET() {
 
     const basket = await getBasket(basketIdent);
     
+    if (!basket) {
+      const response = NextResponse.json({ authenticated: false });
+      response.cookies.delete("tebex_basket");
+      return response;
+    }
+
     // The user is authenticated if the basket is tied to a username
     if (basket.username || basket.username_id) {
       return NextResponse.json({
@@ -27,6 +33,8 @@ export async function GET() {
     return NextResponse.json({ authenticated: false });
   } catch (error) {
     console.error("Session check error:", error);
-    return NextResponse.json({ authenticated: false });
+    const response = NextResponse.json({ authenticated: false });
+    response.cookies.delete("tebex_basket");
+    return response;
   }
 }

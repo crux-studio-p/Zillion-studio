@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createBasket, getAuthUrls } from "@/lib/tebex";
+import { createBasket, getAuthUrls, getBasket } from "@/lib/tebex";
 
 export async function GET(request: Request) {
   try {
     const cookieStore = await cookies();
     let basketIdent = cookieStore.get("tebex_basket")?.value;
     let isNewBasket = false;
+
+    if (basketIdent) {
+      const existing = await getBasket(basketIdent);
+      if (!existing) {
+        basketIdent = undefined;
+      }
+    }
 
     if (!basketIdent) {
       const basket = await createBasket();
@@ -18,10 +25,31 @@ export async function GET(request: Request) {
       throw new Error("Could not create or find basket ident");
     }
 
-    const returnUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const { searchParams } = new URL(request.url);
+    const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin || "http://localhost:3000";
+    const returnParam = searchParams.get("returnUrl");
+    const returnUrl = returnParam 
+      ? (returnParam.startsWith("http") ? returnParam : `${origin}${returnParam.startsWith("/") ? "" : "/"}${returnParam}`)
+      : `${origin}/store`;
     
     // Fetch authentication links
-    const authUrls = await getAuthUrls(basketIdent, returnUrl);
+    let authUrls: any[];
+    try {
+      authUrls = await getAuthUrls(basketIdent, returnUrl);
+    } catch {
+      // If fetching auth urls fails with existing basket, fallback to fresh basket
+      const basket = await createBasket();
+      if (!basket?.ident) {
+        throw new Error("Could not create fresh basket ident");
+      }
+      basketIdent = basket.ident as string;
+      isNewBasket = true;
+      authUrls = await getAuthUrls(basketIdent, returnUrl);
+    }
+
+    if (!basketIdent) {
+      throw new Error("Basket identifier is missing");
+    }
 
     if (authUrls && authUrls.length > 0) {
       // Redirect to the first available authentication provider
