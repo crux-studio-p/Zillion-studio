@@ -43,3 +43,9 @@ next-env.d.ts
 
 #docs
 /docs
+PRODUCT.md
+
+# ide & local tooling
+.cursor/
+.gemini/
+.impeccable/

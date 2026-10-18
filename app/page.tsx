@@ -14,8 +14,10 @@ const SILK = `
 
 export default async function Page() {
   const categories = await getCategoriesWithPackages();
-  const allPackages = categories.flatMap((c) => 
+  type CardItem = { id?: number; title: string; category: string; image: string };
+  const allPackages: CardItem[] = categories.flatMap((c) => 
     c.packages.map(p => ({
+      id: p.id,
       title: p.name,
       category: c.name,
       image: p.image || "/affiliate-program-bg.png"
@@ -26,21 +28,30 @@ export default async function Page() {
   const shuffled = allPackages.sort(() => 0.5 - Math.random());
   
   // Hero takes first 7
-  const heroCards = shuffled.slice(0, 7);
-  while (heroCards.length < 7) {
-    heroCards.push({ title: "Product", category: "Store", image: "/affiliate-program-bg.png" });
+  const heroCards: CardItem[] = [...shuffled.slice(0, 7)];
+  if (shuffled.length > 0) {
+    while (heroCards.length < 7) {
+      heroCards.push(shuffled[heroCards.length % shuffled.length]);
+    }
+  } else {
+    while (heroCards.length < 7) {
+      heroCards.push({ id: undefined, title: "Product", category: "Store", image: "/affiliate-program-bg.png" });
+    }
   }
 
   // Gallery takes up to 14
-  const galleryCards = shuffled.slice(0, 14);
+  const galleryCards: CardItem[] = shuffled.length > 0 ? shuffled.slice(0, 14) : [];
 
   return (
     <>
-      <div className="fixed inset-0 z-[-1]" style={{ background: SILK }} />
+      <div
+        className="fixed inset-0 z-[-1] transition-colors duration-300"
+        style={{ background: "var(--silk-gradient)" }}
+      />
       <Hero cards={heroCards} />
       <ArcGallery products={galleryCards} />
       <Testimonials />
-      <TopCustomers />
+      {/* <TopCustomers /> */}
       <Faq />
       <Footer />
     </>

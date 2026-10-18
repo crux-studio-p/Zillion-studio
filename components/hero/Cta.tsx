@@ -37,7 +37,7 @@ export function Cta({ primary, secondary, delay = 0, play = true, size = "sm", c
       {secondary && (
         <a
           href="#"
-          className={`grid place-items-center rounded-full bg-black/[0.04] text-neutral-700 ${SIZE[size]}`}
+          className={`grid place-items-center rounded-full bg-black/[0.05] text-neutral-800 hover:bg-black/10 dark:bg-white/[0.08] dark:text-neutral-200 dark:hover:bg-white/15 transition-colors ${SIZE[size]}`}
         >
           {secondary}
         </a>

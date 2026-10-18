@@ -111,6 +111,7 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
       const res = await addToCart(pkg.id, currentPath);
       if (res.success) {
         toast.success(`"${pkg.name}" added to cart!`);
+        window.dispatchEvent(new Event("cart-updated"));
       } else if (res.requiresAuth) {
         toast.error("FiveM Login Required", {
           description: "Connect your FiveM / Cfx.re account to add items to your cart.",
@@ -267,13 +268,17 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
               )}
 
               {/* Price */}
-              <div className="mt-6 flex items-end gap-3">
-                <span className="text-3xl font-light tracking-tighter text-foreground">
+              <div className="mt-6 flex flex-wrap items-baseline gap-3">
+                <span className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
                   {priceDisplay}
                 </span>
-                {pkg.total_price > 0 && (
-                  <span className="mb-1.5 text-[13px] text-muted-foreground">
-                    one-time payment
+                {pkg.total_price > 0 ? (
+                  <span className="rounded-full bg-muted px-3 py-1 text-[12px] font-semibold text-muted-foreground border border-border">
+                    One-time payment
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[12px] font-bold text-emerald-600 border border-emerald-500/20">
+                    Free Download
                   </span>
                 )}
               </div>
@@ -311,7 +316,7 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                   Overview
                 </h3>
                 <div 
-                  className="mt-4 text-[14.5px] leading-relaxed text-muted-foreground prose prose-sm max-w-none"
+                  className="mt-4 text-[14.5px] leading-relaxed text-muted-foreground prose prose-sm dark:prose-invert max-w-none"
                   dangerouslySetInnerHTML={{ __html: parsed.descriptionHtml || pkg.description }}
                 />
               </div>

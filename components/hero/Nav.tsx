@@ -1,11 +1,13 @@
 // components/hero/Nav.tsx
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { MessageCircle, Menu, ShoppingBag, Sun, User, X, LogOut, Loader2 } from "lucide-react";
+import { MessageCircle, Menu, ShoppingBag, Sun, Moon, User, X, LogOut, Loader2 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { EASE_OUT, T } from "@/lib/hero-timing";
 import { CartDrawer } from "@/components/store/CartDrawer";
 import { BRAND, NAV_LINKS } from "@/lib/content";
+import { getCart } from "@/app/actions/cart";
 
 import Link from "next/link";
 
@@ -28,6 +30,51 @@ export function Nav() {
   const [user, setUser] = useState<{username?: string, id?: string} | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [currentPath, setCurrentPath] = useState("/store");
+  const [cartCount, setCartCount] = useState<number>(0);
+
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  };
+
+  const refreshCart = useCallback(async () => {
+    try {
+      const cart = await getCart();
+      const count =
+        cart?.packages?.reduce(
+          (sum: number, item: any) => sum + (item.in_basket?.quantity || item.quantity || 1),
+          0
+        ) ?? 0;
+      setCartCount(count);
+    } catch {
+      // Ignore background fetch error
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshCart();
+
+    const handleUpdate = () => {
+      refreshCart();
+    };
+
+    window.addEventListener("cart-updated", handleUpdate);
+    return () => {
+      window.removeEventListener("cart-updated", handleUpdate);
+    };
+  }, [refreshCart]);
+
+  useEffect(() => {
+    if (!isCartOpen) {
+      refreshCart();
+    }
+  }, [isCartOpen, refreshCart]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -114,9 +161,11 @@ export function Nav() {
                 className={`${ICON_BTN} relative h-10 w-10`}
               >
                 <ShoppingBag size={18} />
-                <span className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-background bg-primary text-[10px] font-bold text-primary-foreground">
-                  2
-                </span>
+                {cartCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-background bg-primary text-[10px] font-bold text-primary-foreground">
+                    {cartCount > 99 ? "99+" : cartCount}
+                  </span>
+                )}
               </motion.button>
 
               <div className="hidden items-center gap-2 lg:flex">
@@ -163,12 +212,13 @@ export function Nav() {
                 <motion.button
                   type="button"
                   aria-label="Toggle theme"
+                  onClick={toggleTheme}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: T.nav + 0.1, duration: 0.5, ease: EASE_OUT }}
-                  className={`${ICON_BTN} h-10 w-10`}
+                  className={`${ICON_BTN} h-10 w-10 hover:opacity-80 transition-opacity`}
                 >
-                  <Sun size={18} />
+                  {mounted && resolvedTheme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
                 </motion.button>
               </div>
 
@@ -198,9 +248,9 @@ export function Nav() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-background/95 px-4 pb-8 backdrop-blur-xl sm:px-6 lg:hidden"
+            className="fixed inset-0 z-[60] flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-background/95 px-4 pb-6 backdrop-blur-xl sm:px-6 lg:hidden"
           >
-            <div className="flex h-[64px] shrink-0 items-center justify-between">
+            <div className="flex h-[56px] sm:h-[64px] shrink-0 items-center justify-between border-b border-border/40">
               <Logo className="text-[18px]" />
               <button
                 type="button"
@@ -213,40 +263,65 @@ export function Nav() {
               </button>
             </div>
 
-            <ul className="mt-6 flex flex-col">
+            <ul className="my-auto flex flex-1 min-h-0 flex-col overflow-y-auto py-2">
               {NAV_LINKS.map((l, i) => (
                 <motion.li
                   key={l.label}
-                  initial={{ opacity: 0, y: 12 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.08 + i * 0.05, duration: 0.4, ease: EASE_OUT }}
+                  transition={{ delay: 0.05 + i * 0.04, duration: 0.35, ease: EASE_OUT }}
                 >
                   <a
                     href={l.href}
                     onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-2 border-b border-border py-4 text-[26px] font-medium tracking-tight"
+                    className="flex items-center gap-2 border-b border-border/30 py-2 sm:py-2.5 text-[28px] sm:text-[21px] font-medium tracking-tight text-foreground/90 transition-colors hover:text-foreground"
                   >
-                    {l.icon === "chat" && <MessageCircle size={16} fill="currentColor" aria-hidden="true" />}
+                    {l.icon === "chat" && <MessageCircle size={15} fill="currentColor" aria-hidden="true" />}
                     {l.label}
                   </a>
                 </motion.li>
               ))}
             </ul>
 
-            <div className="mt-auto flex gap-3 pt-8">
-              {user ? (
-                <a href="/api/auth/logout" className={`${ICON_BTN} flex h-11 flex-1 items-center justify-center gap-2 bg-muted/50 text-foreground hover:bg-muted`}>
-                  <LogOut size={18} />
-                  Logout
-                </a>
-              ) : (
-                <a href={`/api/auth/login?returnUrl=${encodeURIComponent(currentPath)}`} className="flex h-11 flex-1 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground shadow-sm">
-                  Login
-                </a>
+            <div className="mt-auto shrink-0 flex flex-col gap-2.5 pt-3 border-t border-border/40">
+              {user && (
+                <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-card border border-border">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-foreground shrink-0">
+                    <User size={13} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground leading-none mb-0.5">Signed in as</p>
+                    <p className="text-xs font-semibold text-foreground truncate">{user.username || "Account"}</p>
+                  </div>
+                </div>
               )}
-              <button type="button" aria-label="Toggle theme" className={`${ICON_BTN} h-11 w-11 shrink-0`}>
-                <Sun size={18} />
-              </button>
+
+              <div className="flex gap-3">
+                {user ? (
+                  <a 
+                    href="/api/auth/logout" 
+                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-muted"
+                  >
+                    <LogOut size={16} />
+                    <span>Logout</span>
+                  </a>
+                ) : (
+                  <a 
+                    href={`/api/auth/login?returnUrl=${encodeURIComponent(currentPath)}`} 
+                    className="flex h-11 flex-1 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-85"
+                  >
+                    Login
+                  </a>
+                )}
+                <button
+                  type="button"
+                  aria-label="Toggle theme"
+                  onClick={toggleTheme}
+                  className={`${ICON_BTN} h-11 w-11 shrink-0 hover:opacity-80 transition-opacity`}
+                >
+                  {mounted && resolvedTheme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

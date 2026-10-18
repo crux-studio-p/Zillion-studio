@@ -21,7 +21,7 @@ export const HERO = {
     "Ready-to-install FiveM scripts and Tebex store templates, with documentation and updates included.",
   primary: "Browse the store",
   secondary: "Join Discord",
-  tags: ["@owner", "@developer"],
+  // tags: ["@owner", "@developer"],
 };
 
 export type HeadlineLine = { text: string; accent?: string[] };
@@ -120,20 +120,18 @@ export type TopCustomer = {
 };
 
 export const TOP_CUSTOMERS_SECTION = {
-  eyebrow: "Community",
-  heading: "Top customers this month.",
+  eyebrow: "Network Activity",
+  heading: "Recent Payments",
+  subheading: "Real-time payments of our latest customers",
 };
 
-// PLACEHOLDERS: replace with live data from your database/Tebex before launch.
+// Top 5 customers
 export const TOP_CUSTOMERS: TopCustomer[] = [
-  { username: "Customer", purchases: 12, spent: "£360" },
-  { username: "Customer", purchases: 10, spent: "£300" },
-  { username: "Customer", purchases: 9, spent: "£270" },
-  { username: "Customer", purchases: 8, spent: "£240" },
-  { username: "Customer", purchases: 7, spent: "£210" },
-  { username: "Customer", purchases: 6, spent: "£180" },
-  { username: "Customer", purchases: 5, spent: "£150" },
-  { username: "Customer", purchases: 4, spent: "£120" },
+  { username: "Ghosttvcee", purchases: 12, spent: "£360" },
+  { username: "UnchainedRoleplay", purchases: 10, spent: "£300" },
+  { username: "Civ_ironhead_3150", purchases: 9, spent: "£270" },
+  { username: "OzzyClown_TTV", purchases: 8, spent: "£240" },
+  { username: "King_Monie", purchases: 7, spent: "£210" },
 ];
 
 // ---------------------------------------------------------------------------

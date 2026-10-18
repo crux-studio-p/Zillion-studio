@@ -8,7 +8,9 @@ import { HeroCopy } from "./HeroCopy";
 import { Nav } from "./Nav";
 import { useHeroLayout } from "./useHeroLayout";
 
-export default function Hero({ cards }: { cards?: { category: string; title: string; image: string }[] }) {
+import type { HeroCard } from "./CardStack";
+
+export default function Hero({ cards }: { cards?: HeroCard[] }) {
   const layout = useHeroLayout();
 
   return (
