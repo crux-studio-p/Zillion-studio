@@ -15,6 +15,7 @@ const SPAN = STEP * COUNT;
 const SPEED = 4; // degrees per second, right to left.
 
 const wrap = (a: number) => ((((a + SPAN / 2) % SPAN) + SPAN) % SPAN) - SPAN / 2;
+const slugify = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
 export type GalleryProduct = {
   category: string;
@@ -97,13 +98,15 @@ export function ArcGallery({ products }: { products?: GalleryProduct[] }) {
               {Array.from({ length: COUNT }, (_, i) => {
                 const p = displayProducts[i % displayProducts.length];
                 const dup = i >= displayProducts.length;
+                const href = p.id ? `/store/${slugify(p.title)}-${p.id}` : "/store";
+
                 return (
                   <Link
                     key={i}
                     ref={(el) => {
                       cards.current[i] = el;
                     }}
-                    href={p.id ? `/store/package/${p.id}` : "#"}
+                    href={href}
                     aria-label={`${p.category}: ${p.title}`}
                     aria-hidden={dup || undefined}
                     tabIndex={dup ? -1 : undefined}
@@ -111,7 +114,7 @@ export function ArcGallery({ products }: { products?: GalleryProduct[] }) {
                     onPointerLeave={resume}
                     onFocus={pause}
                     onBlur={resume}
-                    className="absolute left-0 top-0 block will-change-transform"
+                    className="absolute left-0 top-0 block will-change-transform cursor-pointer"
                     style={{ width: layout.card.w, height: layout.card.h }}
                   >
                     <span

@@ -37,6 +37,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     if (res.success) {
       toast.success("Item removed from cart");
       await fetchCart();
+      window.dispatchEvent(new Event("cart-updated"));
     } else {
       toast.error(res.error || "Failed to remove item");
     }

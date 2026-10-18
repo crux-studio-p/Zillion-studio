@@ -24,11 +24,11 @@ export function HeroCopy({ layout }: { layout: Layout }) {
         </span>
       </div>
 
-      <MentionTag label={HERO.tags[0]} delay={T.tag} rotate={-3} className="bg-[#2f5fe0]" style={h.tag1} />
-      <MentionTag label={HERO.tags[1]} delay={T.tag2} rotate={8} tail="left" className="bg-[#74b494]" style={h.tag2} />
+      {/* <MentionTag label={HERO.tags[0]} delay={T.tag} rotate={-3} className="bg-[#2f5fe0]" style={h.tag1} />
+      <MentionTag label={HERO.tags[1]} delay={T.tag2} rotate={8} tail="left" className="bg-[#74b494]" style={h.tag2} /> */}
 
       <div
-        className="absolute inset-x-0 mx-auto text-center text-neutral-700"
+        className="absolute inset-x-0 mx-auto text-center text-neutral-700 dark:text-neutral-300"
         style={{
           top: h.subTop,
           fontSize: h.subSize,

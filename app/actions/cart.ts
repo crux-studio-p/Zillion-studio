@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { addPackageToBasket, createBasket, getAuthUrls, updatePackageQuantity, getBasket, TEBEX_PUBLIC_TOKEN } from "@/lib/tebex";
+import { addPackageToBasket, createBasket, getAuthUrls, updatePackageQuantity, getBasket, TEBEX_PUBLIC_TOKEN, getStoreCoupons, lookupGiftCard, type TebexCouponItem, type TebexGiftCard } from "@/lib/tebex";
 
 /**
  * Retrieves the current basket identifier from cookies, or creates a new one.
@@ -152,10 +152,10 @@ export async function applyCoupon(couponCode: string) {
     const cookieStore = await cookies();
     const basketIdent = cookieStore.get("tebex_basket")?.value;
     if (!basketIdent) {
-      throw new Error("No basket found");
+      throw new Error("No basket found. Please add an item first.");
     }
 
-    const res = await fetch(`https://headless.tebex.io/api/baskets/${basketIdent}/coupons`, {
+    const res = await fetch(`https://headless.tebex.io/api/accounts/${TEBEX_PUBLIC_TOKEN}/baskets/${basketIdent}/coupons`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -165,8 +165,13 @@ export async function applyCoupon(couponCode: string) {
     });
 
     if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Failed to apply coupon`);
+      const raw = await res.text();
+      let errorMsg = "Invalid or expired coupon code";
+      try {
+        const parsed = JSON.parse(raw);
+        errorMsg = parsed.detail || parsed.message || parsed.title || errorMsg;
+      } catch {}
+      throw new Error(errorMsg);
     }
 
     revalidatePath("/", "layout");
@@ -184,7 +189,7 @@ export async function removeCoupon(couponCode: string) {
       throw new Error("No basket found");
     }
 
-    const res = await fetch(`https://headless.tebex.io/api/baskets/${basketIdent}/coupons/remove`, {
+    const res = await fetch(`https://headless.tebex.io/api/accounts/${TEBEX_PUBLIC_TOKEN}/baskets/${basketIdent}/coupons/remove`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -195,6 +200,93 @@ export async function removeCoupon(couponCode: string) {
 
     if (!res.ok) {
       throw new Error(`Failed to remove coupon`);
+    }
+
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getAvailableCoupons(): Promise<TebexCouponItem[]> {
+  try {
+    return await getStoreCoupons();
+  } catch (error) {
+    console.error("Failed to retrieve available coupons:", error);
+    return [];
+  }
+}
+
+export async function checkGiftCardBalance(cardNumber: string) {
+  try {
+    const card = await lookupGiftCard(cardNumber);
+    if (!card) {
+      return { success: false, error: "Gift card not found. Please check the code and try again." };
+    }
+    return { success: true, card };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to check gift card balance" };
+  }
+}
+
+export async function applyGiftCard(cardNumber: string) {
+  try {
+    const cookieStore = await cookies();
+    const basketIdent = cookieStore.get("tebex_basket")?.value;
+    if (!basketIdent) {
+      throw new Error("No active basket found. Please add an item first.");
+    }
+
+    const cleanNumber = cardNumber.replace(/[\s-]/g, "").trim();
+
+    const res = await fetch(`https://headless.tebex.io/api/accounts/${TEBEX_PUBLIC_TOKEN}/baskets/${basketIdent}/giftcards`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ card_number: cleanNumber }),
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      const raw = await res.text();
+      let errorMsg = "Invalid or depleted gift card";
+      try {
+        const parsed = JSON.parse(raw);
+        errorMsg = parsed.detail || parsed.message || parsed.title || errorMsg;
+      } catch {}
+      throw new Error(errorMsg);
+    }
+
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function removeGiftCard(cardNumber: string) {
+  try {
+    const cookieStore = await cookies();
+    const basketIdent = cookieStore.get("tebex_basket")?.value;
+    if (!basketIdent) {
+      throw new Error("No basket found");
+    }
+
+    const cleanNumber = cardNumber.replace(/[\s-]/g, "").trim();
+
+    const res = await fetch(`https://headless.tebex.io/api/accounts/${TEBEX_PUBLIC_TOKEN}/baskets/${basketIdent}/giftcards/remove`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ card_number: cleanNumber }),
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to remove gift card");
     }
 
     revalidatePath("/", "layout");

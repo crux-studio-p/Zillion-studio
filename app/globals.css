@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #eaeae5;
   --foreground: #171717;
@@ -11,8 +13,27 @@
   --muted: #f4f4f0;
   --muted-foreground: #525252;
   --border: #e5e5e5;
+  --silk-gradient: radial-gradient(1200px 600px at 20% 10%, #eaeae5 0%, transparent 60%),
+                  radial-gradient(900px 500px at 80% 30%, #ebebeb 0%, transparent 60%),
+                  linear-gradient(120deg, #e2e2dd, #e6e6e1 40%, #dcdcd7 70%, #eaeae5);
   color-scheme: light;
   --k: 1;
+}
+
+.dark {
+  --background: #121212;
+  --foreground: #f4f4f7;
+  --card: #1c1c1e;
+  --card-foreground: #f4f4f7;
+  --primary: #ffffff;
+  --primary-foreground: #121212;
+  --muted: #222226;
+  --muted-foreground: #9a9aa2;
+  --border: #2a2a2e;
+  --silk-gradient: radial-gradient(1200px 600px at 20% 10%, #1a1a1c 0%, transparent 60%),
+                  radial-gradient(900px 500px at 80% 30%, #161618 0%, transparent 60%),
+                  linear-gradient(120deg, #101010, #141414 40%, #0f0f10 70%, #121212);
+  color-scheme: dark;
 }
 
 @theme inline {

@@ -10,7 +10,7 @@ import { EASE_OUT } from "@/lib/hero-timing";
 
 function Item({ item, open, onToggle }: { item: FaqItem; open: boolean; onToggle: () => void }) {
   return (
-    <div className="border-b border-black/[0.07] last:border-b-0">
+    <div className="border-b border-border/70 last:border-b-0">
       <button
         type="button"
         onClick={onToggle}
@@ -23,7 +23,7 @@ function Item({ item, open, onToggle }: { item: FaqItem; open: boolean; onToggle
         <motion.span
           animate={{ rotate: open ? 45 : 0 }}
           transition={{ duration: 0.25, ease: EASE_OUT }}
-          className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#f0f0ec] text-muted-foreground"
+          className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground"
         >
           <Plus size={12} />
         </motion.span>

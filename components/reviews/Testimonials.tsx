@@ -28,10 +28,10 @@ function Card({ r, w, hidden }: { r: Review; w: number; hidden: boolean }) {
   return (
     <figure
       aria-hidden={hidden || undefined}
-      className="flex shrink-0 flex-col items-center rounded-2xl bg-[#e3e1d1] px-8 pb-[15px] pt-4"
+      className="flex shrink-0 flex-col items-center rounded-2xl bg-[#e3e1d1] dark:bg-[#1c1c1e] dark:border dark:border-white/5 px-8 pb-[15px] pt-4 transition-colors"
       style={{ width: w, height: CARD_H }}
     >
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#e5e0b8] text-foreground">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#e5e0b8] dark:bg-[#23232c] text-foreground">
         {/* Material "format_quote". If it looks the wrong way round, add rotate-180. */}
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
           <path fill="currentColor" d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z" />
@@ -46,7 +46,7 @@ function Card({ r, w, hidden }: { r: Review; w: number; hidden: boolean }) {
         {r.avatar ? (
           <Image src={r.avatar} alt="" width={32} height={32} className="h-8 w-8 rounded-lg object-cover" />
         ) : (
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#d8d3a8] text-[11px] font-medium text-neutral-800">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#d8d3a8] dark:bg-[#282834] text-[11px] font-medium text-neutral-800 dark:text-neutral-200">
             {initials(r.name)}
           </span>
         )}
@@ -181,7 +181,7 @@ export function Testimonials({ reviews = REVIEWS }: { reviews?: Review[] }) {
           type="button"
           aria-label="Previous review"
           onClick={() => step(-1)}
-          className="grid h-8 w-8 place-items-center rounded-lg bg-[#0d0d0d] text-primary-foreground transition-transform active:scale-95"
+          className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground transition-transform active:scale-95 hover:opacity-90"
         >
           <ArrowLeft size={12} />
         </button>
@@ -189,7 +189,7 @@ export function Testimonials({ reviews = REVIEWS }: { reviews?: Review[] }) {
           type="button"
           aria-label="Next review"
           onClick={() => step(1)}
-          className="grid h-8 w-8 place-items-center rounded-lg bg-[#0d0d0d] text-primary-foreground transition-transform active:scale-95"
+          className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground transition-transform active:scale-95 hover:opacity-90"
         >
           <ArrowRight size={12} />
         </button>

@@ -8,6 +8,7 @@ import { motion, Variants } from "motion/react";
 import { TebexCategory } from "@/lib/tebex";
 import { AddToCartButton } from "./AddToCartButton";
 import { parsePackageDescription } from "@/lib/parsers/description-parser";
+import { ProductCard } from "./ProductCard";
 
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
@@ -79,80 +80,19 @@ export function StoreClient({ categories }: { categories: TebexCategory[] }) {
           )}
 
           {/* Grid */}
-          <motion.div variants={fadeUp} className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+          <motion.div variants={fadeUp} className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filteredPackages.length > 0 ? (
               filteredPackages.map((p, i) => (
-                <div key={p.id || i} className="group flex flex-col gap-5">
-                  {/* Product Cover */}
-                  <Link href={`/store/${slugify(p.name)}-${p.id}`}>
-                    <div className="relative w-full overflow-hidden rounded-[24px] transition-all duration-300 group-hover:-translate-y-1 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-muted">
-                    {p.image ? (
-                      <img src={p.image} alt={p.name} className="w-full h-auto block" />
-                    ) : (
-                      <div className="flex aspect-video w-full items-center justify-center text-muted-foreground text-sm font-medium">
-                        No Image
-                      </div>
-                    )}
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 backdrop-blur-[2px] transition-all duration-300 group-hover:bg-black/10 group-hover:opacity-100">
-                      <span className="rounded-full bg-white/95 px-5 py-2.5 text-[12px] font-bold text-foreground shadow-md transition-transform hover:scale-105">
-                        View package
-                      </span>
-                    </div>
-                  </div>
-                  </Link>
-
-                  {/* Product Info */}
-                  <div className="flex flex-col px-1">
-                    <div className="flex items-start justify-between gap-4">
-                      <Link href={`/store/${slugify(p.name)}-${p.id}`} className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                          <span className="text-[12px] font-semibold text-primary uppercase tracking-wide">
-                            {p.categoryName}
-                          </span>
-                          {(() => {
-                            const parsed = parsePackageDescription(p.description || "");
-                            if (parsed.version) {
-                              return (
-                                <span className="rounded-full bg-primary/10 px-2 py-0.2 text-[10px] font-bold text-primary border border-primary/20">
-                                  {parsed.version}
-                                </span>
-                              );
-                            }
-                            return null;
-                          })()}
-                        </div>
-                        <h3 className="text-[17px] font-bold tracking-tight text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
-                          {p.name}
-                        </h3>
-                        {(() => {
-                          const parsed = parsePackageDescription(p.description || "");
-                          if (parsed.compat.frameworks.length > 0) {
-                            return (
-                              <div className="mt-2 flex flex-wrap gap-1">
-                                {parsed.compat.frameworks.map((fw) => (
-                                  <span
-                                    key={fw}
-                                    className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground border border-border"
-                                  >
-                                    {fw}
-                                  </span>
-                                ))}
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </Link>
-                      <div className="shrink-0 flex items-center gap-2 pt-0.5">
-                        <span className="text-[18px] md:text-[20px] font-normal tracking-tight text-foreground transition-colors duration-300 group-hover:text-primary">
-                          {p.total_price === 0 ? "Free" : `${p.currency === "EUR" ? "€" : p.currency === "GBP" ? "£" : "$"}${p.total_price.toFixed(2)}`}
-                        </span>
-                        <AddToCartButton packageId={p.id} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ProductCard
+                  key={p.id || i}
+                  id={p.id}
+                  name={p.name}
+                  image={p.image}
+                  price={p.total_price}
+                  currency={p.currency}
+                  categoryName={p.categoryName}
+                  description={p.description}
+                />
               ))
             ) : (
               <div className="col-span-full py-12 text-center text-muted-foreground">

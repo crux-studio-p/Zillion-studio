@@ -172,3 +172,152 @@ export async function updatePackageQuantity(ident: string, packageId: number, qu
   const json = await res.json();
   return json.data;
 }
+
+export interface TebexCouponItem {
+  id: number;
+  code: string;
+  effective?: {
+    type: string;
+    packages: number[];
+    categories: number[];
+  };
+  discount: {
+    type: "value" | "percentage" | string;
+    percentage: number;
+    value: number;
+  };
+  expire?: {
+    redeem_unlimited: string | boolean;
+    expire_never: string | boolean;
+    limit: number;
+    date: string;
+  };
+  basket_type?: string;
+  start_date?: string;
+  user_limit?: number;
+  minimum?: number;
+  username?: string | null;
+  note?: string;
+}
+
+/**
+ * Retrieves active public coupons configured on the Tebex store account using the Plugin API.
+ * Requires TEBEX_SERVER_SECRET (Game Server Secret Key) in environment variables.
+ */
+export async function getStoreCoupons(): Promise<TebexCouponItem[]> {
+  const secret = process.env.TEBEX_SERVER_SECRET || process.env.TEBEX_PLUGIN_SECRET;
+  if (!secret) {
+    return [];
+  }
+
+  try {
+    const res = await fetch("https://plugin.tebex.io/coupons", {
+      headers: {
+        "X-Tebex-Secret": secret,
+      },
+      next: { revalidate: 60 },
+    });
+
+    if (!res.ok) {
+      if (res.status === 403) {
+        console.warn("[Tebex] Coupon API returned 403: Verify TEBEX_SERVER_SECRET is a valid Game Server Secret Key.");
+      }
+      return [];
+    }
+
+    const json = await res.json();
+    const list: TebexCouponItem[] = json.data || [];
+    const now = new Date();
+
+    return list.filter((item) => {
+      // Exclude username-restricted coupons from public display
+      if (item.username) return false;
+
+      // Check expiry date
+      if (item.expire) {
+        const isNever = item.expire.expire_never === "true" || item.expire.expire_never === true;
+        if (!isNever && item.expire.date) {
+          const exp = new Date(item.expire.date);
+          if (!isNaN(exp.getTime()) && exp.getTime() < now.getTime()) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
+  } catch (error) {
+    console.error("[Tebex] Failed to fetch coupons:", error);
+    return [];
+  }
+}
+
+export interface TebexGiftCard {
+  id: number;
+  code: string;
+  balance: {
+    starting: string | number;
+    remaining: string | number;
+    currency: string;
+  };
+  note?: string;
+  void: boolean;
+}
+
+/**
+ * Looks up a gift card's balance and details via the Tebex Plugin API.
+ * Requires TEBEX_SERVER_SECRET in environment variables.
+ */
+export async function lookupGiftCard(code: string): Promise<TebexGiftCard | null> {
+  const secret = process.env.TEBEX_SERVER_SECRET || process.env.TEBEX_PLUGIN_SECRET;
+  if (!secret) {
+    throw new Error("Server secret key (TEBEX_SERVER_SECRET) is required to look up gift cards. Please add it to your .env file.");
+  }
+
+  const cleanCode = code.replace(/[\s-]/g, "").trim();
+  if (!cleanCode) {
+    throw new Error("Gift card code is required.");
+  }
+
+  try {
+    // Primary endpoint: lookup by card number
+    const res = await fetch(`https://plugin.tebex.io/gift-cards/lookup/${encodeURIComponent(cleanCode)}`, {
+      headers: {
+        "X-Tebex-Secret": secret,
+      },
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      return json.data || json;
+    }
+
+    // Fallback: list cards and find match
+    const listRes = await fetch("https://plugin.tebex.io/gift-cards", {
+      headers: {
+        "X-Tebex-Secret": secret,
+      },
+      cache: "no-store",
+    });
+
+    if (listRes.ok) {
+      const listJson = await listRes.json();
+      const cards: TebexGiftCard[] = listJson.data || [];
+      const match = cards.find(
+        (c) => c.code?.replace(/[\s-]/g, "").toLowerCase() === cleanCode.toLowerCase()
+      );
+      if (match) return match;
+    }
+
+    if (res.status === 404) {
+      return null;
+    }
+
+    const errorText = await res.text();
+    throw new Error(`Failed to lookup gift card: ${errorText || res.statusText}`);
+  } catch (err: any) {
+    console.error("[Tebex] Gift card lookup error:", err);
+    throw err;
+  }
+}

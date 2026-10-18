@@ -18,6 +18,7 @@ export function AddToCartButton({ packageId }: { packageId: number }) {
     
     if (res.success) {
       toast.success("Added to cart successfully");
+      window.dispatchEvent(new Event("cart-updated"));
     } else if (res.requiresAuth) {
       toast.error("FiveM Login Required", {
         description: "Connect your FiveM / Cfx.re account to add items to your cart.",

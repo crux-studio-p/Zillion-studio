@@ -39,7 +39,7 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative w-full overflow-hidden bg-[#f2f2f0] text-foreground">
+    <footer className="relative w-full overflow-hidden bg-[#f2f2f0] dark:bg-[#121212] text-foreground border-t border-transparent dark:border-white/5 transition-colors">
 
       {/* ── top content row ─────────────────────────────── */}
       <div className="mx-auto flex max-w-5xl flex-col gap-10 px-6 pt-14 sm:flex-row sm:gap-6">
@@ -61,7 +61,7 @@ export function Footer() {
         <div className="flex flex-1 flex-wrap gap-x-10 gap-y-8">
           {COLS.map((col) => (
             <div key={col.heading} className="flex flex-col gap-3">
-              <p className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
+              <p className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-neutral-400 dark:text-neutral-500">
                 {col.heading}
               </p>
               <ul className="flex flex-col gap-2.5">
@@ -69,7 +69,7 @@ export function Footer() {
                   <li key={l.label}>
                     <Link
                       href={l.href}
-                      className="text-[12.5px] text-muted-foreground transition-colors hover:text-neutral-900"
+                      className="text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
                     >
                       {l.label}
                     </Link>
@@ -106,7 +106,7 @@ export function Footer() {
         className="pointer-events-none mt-12 flex w-full select-none justify-center"
       >
         <p
-          className="whitespace-nowrap font-black text-neutral-900/10 translate-y-[10%]"
+          className="whitespace-nowrap font-black text-neutral-900/10 dark:text-white/5 translate-y-[10%]"
           style={{ 
             fontSize: "max(160px, 22vw)", 
             lineHeight: 0.75,

@@ -1,15 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Trash2, ShieldCheck, Zap, Loader2, Tag, X } from "lucide-react";
+import { ArrowLeft, Trash2, ShieldCheck, Zap, Loader2, Tag, X, Sparkles, Check, Percent, CreditCard, Search } from "lucide-react";
 import Image from "next/image";
 import { Nav } from "@/components/hero/Nav";
 import { Footer } from "@/components/footer/Footer";
 import { useState, useEffect } from "react";
-import { getCart, removeFromCart, applyCoupon, removeCoupon } from "@/app/actions/cart";
+import { getCart, removeFromCart, applyCoupon, removeCoupon, applyGiftCard, removeGiftCard, checkGiftCardBalance } from "@/app/actions/cart";
+import type { TebexCouponItem } from "@/lib/tebex";
 import { toast } from "sonner";
 
-export function CartClient({ initialCart }: { initialCart: any }) {
+export function CartClient({ 
+  initialCart, 
+  availableCoupons = [] 
+}: { 
+  initialCart: any; 
+  availableCoupons?: TebexCouponItem[]; 
+}) {
   const [cart, setCart] = useState<any>(initialCart);
   const [loading, setLoading] = useState(false);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
@@ -17,6 +24,13 @@ export function CartClient({ initialCart }: { initialCart: any }) {
   const [couponCode, setCouponCode] = useState("");
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [removingCouponCode, setRemovingCouponCode] = useState<string | null>(null);
+
+  // Gift card state
+  const [giftCardNumber, setGiftCardNumber] = useState("");
+  const [applyingGiftCard, setApplyingGiftCard] = useState(false);
+  const [removingGiftCardCode, setRemovingGiftCardCode] = useState<string | null>(null);
+  const [checkingGiftCard, setCheckingGiftCard] = useState(false);
+  const [giftCardBalanceInfo, setGiftCardBalanceInfo] = useState<string | null>(null);
 
   const fetchCart = async () => {
     const data = await getCart();
@@ -51,6 +65,20 @@ export function CartClient({ initialCart }: { initialCart: any }) {
     setApplyingCoupon(false);
   };
 
+  const handleQuickApply = async (code: string) => {
+    setCouponCode(code);
+    setApplyingCoupon(true);
+    const res = await applyCoupon(code);
+    if (res.success) {
+      toast.success(`Coupon "${code}" applied!`);
+      setCouponCode("");
+      await fetchCart();
+    } else {
+      toast.error(res.error || "Failed to apply coupon");
+    }
+    setApplyingCoupon(false);
+  };
+
   const handleRemoveCoupon = async (code: string) => {
     setRemovingCouponCode(code);
     const res = await removeCoupon(code);
@@ -63,8 +91,62 @@ export function CartClient({ initialCart }: { initialCart: any }) {
     setRemovingCouponCode(null);
   };
 
+  const handleApplyGiftCard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!giftCardNumber.trim()) return;
+
+    setApplyingGiftCard(true);
+    const res = await applyGiftCard(giftCardNumber.trim());
+    if (res.success) {
+      toast.success("Gift card applied!");
+      setGiftCardNumber("");
+      setGiftCardBalanceInfo(null);
+      await fetchCart();
+    } else {
+      toast.error(res.error || "Invalid or empty gift card");
+    }
+    setApplyingGiftCard(false);
+  };
+
+  const handleRemoveGiftCard = async (code: string) => {
+    setRemovingGiftCardCode(code);
+    const res = await removeGiftCard(code);
+    if (res.success) {
+      toast.success("Gift card removed");
+      await fetchCart();
+    } else {
+      toast.error(res.error || "Failed to remove gift card");
+    }
+    setRemovingGiftCardCode(null);
+  };
+
+  const handleQuickCheckGiftCardBalance = async () => {
+    if (!giftCardNumber.trim()) {
+      toast.error("Please enter a gift card code to check.");
+      return;
+    }
+    setCheckingGiftCard(true);
+    setGiftCardBalanceInfo(null);
+    try {
+      const res = await checkGiftCardBalance(giftCardNumber);
+      if (res.success && res.card) {
+        const bal = res.card.balance?.remaining ?? "0.00";
+        const curr = res.card.balance?.currency || currency;
+        setGiftCardBalanceInfo(`Available Balance: ${curr}${bal}`);
+        toast.success(`Balance: ${curr}${bal}`);
+      } else {
+        toast.error(res.error || "Gift card not found.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to check balance");
+    } finally {
+      setCheckingGiftCard(false);
+    }
+  };
+
   const cartItems = cart?.packages || [];
   const coupons = cart?.coupons || [];
+  const appliedGiftCards = cart?.giftcards || [];
   const subtotal = cart?.total_price ?? cart?.price ?? 0;
   const currency = cart?.currency || "USD";
   const checkoutUrl = cart?.links?.checkout || "#";
@@ -213,47 +295,200 @@ export function CartClient({ initialCart }: { initialCart: any }) {
           {/* Right Column - Checkout Summary Box */}
           <div className="w-full lg:w-[420px] shrink-0 sticky top-[120px]">
             <div className="bg-card border border-border rounded-[24px] p-6 lg:p-8 flex flex-col gap-6 shadow-sm">
-              {/* Coupon Code Section */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Tag size={16} className="text-primary" /> Promotional Code
+              {/* Promotional Code */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Tag size={14} className="text-primary" /> Promotional Code
                 </h3>
                 
                 {coupons.length > 0 && (
-                  <div className="flex flex-col gap-2 mb-4">
+                  <div className="flex flex-col gap-2">
                     {coupons.map((c: any) => (
-                      <div key={c.code} className="flex items-center justify-between p-3 rounded-lg border border-primary/20 bg-primary/5">
-                        <div>
-                          <span className="font-bold text-[13px] text-primary">{c.code}</span>
+                      <div key={c.code} className="flex items-center justify-between p-2.5 rounded-xl border border-primary/20 bg-primary/5">
+                        <div className="flex items-center gap-2">
+                          <Tag size={13} className="text-primary" />
+                          <span className="font-bold text-xs text-primary">{c.code}</span>
                         </div>
                         <button 
                           onClick={() => handleRemoveCoupon(c.code)}
                           disabled={removingCouponCode === c.code}
-                          className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                          className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50 p-1"
                         >
-                          {removingCouponCode === c.code ? <Loader2 size={14} className="animate-spin" /> : <X size={16} />}
+                          {removingCouponCode === c.code ? <Loader2 size={13} className="animate-spin" /> : <X size={15} />}
                         </button>
                       </div>
                     ))}
                   </div>
                 )}
-                
+
                 <form onSubmit={handleApplyCoupon} className="flex gap-2">
                   <input 
                     type="text" 
                     placeholder="Enter coupon code" 
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value)}
-                    className="flex-1 bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary transition-colors"
+                    className="flex-1 bg-background border border-border rounded-xl px-3.5 py-2 text-xs sm:text-sm outline-none focus:border-primary transition-colors text-foreground"
                   />
                   <button 
                     type="submit"
                     disabled={applyingCoupon || !couponCode.trim()}
-                    className="bg-foreground text-background px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:bg-foreground/90 disabled:opacity-50 w-[80px] flex justify-center items-center"
+                    className="bg-foreground text-background px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all hover:bg-foreground/90 disabled:opacity-50 w-[74px] flex justify-center items-center shrink-0"
                   >
-                    {applyingCoupon ? <Loader2 size={16} className="animate-spin" /> : "Apply"}
+                    {applyingCoupon ? <Loader2 size={14} className="animate-spin" /> : "Apply"}
                   </button>
                 </form>
+
+                {/* Available Offers / Active Coupons */}
+                {availableCoupons && availableCoupons.length > 0 && (
+                  <div className="pt-1">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Sparkles size={13} className="text-primary" />
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Available Offers
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      {availableCoupons.map((coupon) => {
+                        const isApplied = coupons.some(
+                          (c: any) => c.code?.toLowerCase() === coupon.code?.toLowerCase()
+                        );
+                        const discountLabel =
+                          coupon.discount?.type === "percentage" || (coupon.discount?.percentage && coupon.discount.percentage > 0)
+                            ? `${coupon.discount.percentage}% OFF`
+                            : `${coupon.discount?.value ?? 0} ${currency} OFF`;
+
+                        return (
+                          <div
+                            key={coupon.id}
+                            className={`group relative p-2.5 rounded-xl border transition-all ${
+                              isApplied
+                                ? "border-primary/40 bg-primary/[0.08]"
+                                : "border-border/80 bg-background/60 hover:border-primary/40 hover:bg-muted/40"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-[11px] font-bold text-foreground bg-muted px-2 py-0.5 rounded border border-border">
+                                    {coupon.code}
+                                  </span>
+                                  <span className="text-xs font-extrabold text-primary">
+                                    {discountLabel}
+                                  </span>
+                                </div>
+                                {coupon.note && (
+                                  <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                                    {coupon.note}
+                                  </p>
+                                )}
+                                {coupon.minimum ? (
+                                  <p className="text-[10px] text-muted-foreground/75 mt-0.5">
+                                    Min. spend: {coupon.minimum} {currency}
+                                  </p>
+                                ) : null}
+                              </div>
+
+                              <div className="shrink-0">
+                                {isApplied ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-primary px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
+                                    <Check size={11} /> Applied
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickApply(coupon.code)}
+                                    disabled={applyingCoupon}
+                                    className="text-xs font-bold px-2.5 py-1 rounded-lg border border-border bg-foreground text-background hover:bg-foreground/90 transition-all disabled:opacity-50"
+                                  >
+                                    Apply
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Gift Card */}
+              <div className="space-y-3 pt-4 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <CreditCard size={14} className="text-primary" /> Gift Card
+                  </h3>
+                  <Link
+                    href="/giftcard"
+                    className="text-[11px] font-medium text-muted-foreground hover:text-primary transition-colors flex items-center gap-0.5"
+                  >
+                    Check balance ↗
+                  </Link>
+                </div>
+
+                {/* Applied Gift Cards */}
+                {appliedGiftCards.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    {appliedGiftCards.map((g: any) => (
+                      <div key={g.card_number} className="flex items-center justify-between p-2.5 rounded-xl border border-primary/20 bg-primary/5">
+                        <div className="flex items-center gap-2">
+                          <CreditCard size={13} className="text-primary" />
+                          <span className="font-mono text-xs font-bold text-foreground">
+                            {g.card_number}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => handleRemoveGiftCard(g.card_number)}
+                          disabled={removingGiftCardCode === g.card_number}
+                          className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50 p-1"
+                        >
+                          {removingGiftCardCode === g.card_number ? <Loader2 size={13} className="animate-spin" /> : <X size={15} />}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <form onSubmit={handleApplyGiftCard} className="flex gap-2">
+                    <input 
+                      type="text" 
+                      placeholder="16-digit gift card code" 
+                      value={giftCardNumber}
+                      onChange={(e) => {
+                        setGiftCardNumber(e.target.value);
+                        setGiftCardBalanceInfo(null);
+                      }}
+                      className="flex-1 bg-background border border-border rounded-xl px-3.5 py-2 text-xs sm:text-sm font-mono outline-none focus:border-primary transition-colors text-foreground"
+                    />
+                    <button 
+                      type="submit"
+                      disabled={applyingGiftCard || !giftCardNumber.trim()}
+                      className="bg-foreground text-background px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all hover:bg-foreground/90 disabled:opacity-50 w-[74px] flex justify-center items-center shrink-0"
+                    >
+                      {applyingGiftCard ? <Loader2 size={14} className="animate-spin" /> : "Apply"}
+                    </button>
+                  </form>
+
+                  <div className="flex items-center justify-between px-0.5">
+                    {giftCardBalanceInfo ? (
+                      <span className="text-[11px] font-bold text-primary">{giftCardBalanceInfo}</span>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">Check funds before applying:</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleQuickCheckGiftCardBalance}
+                      disabled={checkingGiftCard || !giftCardNumber.trim()}
+                      className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 disabled:opacity-50"
+                    >
+                      {checkingGiftCard ? <Loader2 size={11} className="animate-spin" /> : <Search size={11} />}
+                      Check
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-4 border-t border-border pt-6">
