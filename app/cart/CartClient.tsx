@@ -1,11 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Trash2, ShieldCheck, Zap, Loader2, Tag, X, Sparkles, Check, Percent, CreditCard, Search } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Trash2, 
+  ShieldCheck, 
+  Zap, 
+  Loader2, 
+  Tag, 
+  X, 
+  Sparkles, 
+  Check, 
+  Percent, 
+  CreditCard, 
+  Search, 
+  Gift,
+  Star,
+  Lock,
+  LockKeyholeOpen
+} from "lucide-react";
 import Image from "next/image";
 import { Nav } from "@/components/hero/Nav";
 import { Footer } from "@/components/footer/Footer";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { motion } from "motion/react";
 import { getCart, removeFromCart, applyCoupon, removeCoupon, applyGiftCard, removeGiftCard, checkGiftCardBalance } from "@/app/actions/cart";
 import type { TebexCouponItem } from "@/lib/tebex";
 import { toast } from "sonner";
@@ -149,7 +167,133 @@ export function CartClient({
   const appliedGiftCards = cart?.giftcards || [];
   const subtotal = cart?.total_price ?? cart?.price ?? 0;
   const currency = cart?.currency || "USD";
+  const currencySymbol = currency === "EUR" ? "€" : currency === "GBP" ? "£" : "$";
   const checkoutUrl = cart?.links?.checkout || "#";
+
+  // Pre-discount total qualifying value
+  const rawSubtotal = useMemo(() => {
+    return cartItems.reduce((acc: number, item: any) => {
+      const price = item.in_basket?.price ?? item.price ?? item.base_price ?? 0;
+      const qty = item.in_basket?.quantity ?? item.qty ?? 1;
+      return acc + price * qty;
+    }, 0);
+  }, [cartItems]);
+
+  // Derive bulk saving tiers from store coupons with minimum thresholds, or standard reference tiers
+  const bulkTiers = useMemo(() => {
+    const minCoupons = (availableCoupons || [])
+      .filter((c) => typeof c.minimum === "number" && c.minimum > 0)
+      .sort((a, b) => (a.minimum || 0) - (b.minimum || 0));
+
+    if (minCoupons.length >= 2) {
+      const names = ["STARTER", "PRO", "ULTIMATE", "VIP", "ELITE"];
+      return minCoupons.map((c, i) => {
+        const pct = c.discount?.percentage || (c.discount?.type === "percentage" ? c.discount.value : 0);
+        const label = pct > 0 ? `${pct}%` : `${c.discount?.value ?? 0} ${currency}`;
+        return {
+          id: `tier-${c.id}`,
+          name: names[i] || `TIER ${i + 1}`,
+          minimum: c.minimum!,
+          discountPercentage: pct,
+          discountLabel: label,
+          code: c.code,
+        };
+      });
+    }
+
+    // Default reference tiers matching screenshot
+    return [
+      {
+        id: "starter",
+        name: "STARTER",
+        minimum: 100,
+        discountPercentage: 10,
+        discountLabel: "10%",
+        code: "BULK10",
+      },
+      {
+        id: "pro",
+        name: "PRO",
+        minimum: 150,
+        discountPercentage: 15,
+        discountLabel: "15%",
+        code: "BULK15",
+      },
+      {
+        id: "ultimate",
+        name: "ULTIMATE",
+        minimum: 200,
+        discountPercentage: 20,
+        discountLabel: "20%",
+        code: "BULK20",
+      },
+    ];
+  }, [availableCoupons, currency]);
+
+  // Determine active and next tier
+  const eligibleTiers = bulkTiers.filter((t) => rawSubtotal >= t.minimum);
+  const activeTier = eligibleTiers.length > 0 ? eligibleTiers[eligibleTiers.length - 1] : null;
+  const nextTier = bulkTiers.find((t) => rawSubtotal < t.minimum) || null;
+  const amountNeeded = nextTier ? Math.max(0, nextTier.minimum - rawSubtotal) : 0;
+  const maxMinimum = bulkTiers[bulkTiers.length - 1]?.minimum || 200;
+  const progressPercent = Math.min(100, Math.max(0, (rawSubtotal / maxMinimum) * 100));
+
+  // Auto-apply / Auto-remove bulk coupon based on qualifying cart value
+  const isAutoSyncingRef = useRef(false);
+  const lastSyncedCodeRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!cart || isAutoSyncingRef.current || cartItems.length === 0) return;
+
+    // Check if any bulk tier coupon is currently applied in Tebex basket
+    const currentAppliedBulk = cart.coupons?.find((c: any) =>
+      bulkTiers.some((t) => t.code.toLowerCase() === c.code.toLowerCase())
+    );
+
+    const targetCode = activeTier?.code || null;
+
+    // If what is applied already matches target, do nothing
+    if (currentAppliedBulk?.code?.toLowerCase() === targetCode?.toLowerCase()) {
+      return;
+    }
+
+    // Avoid retry spam if we already attempted this code and it wasn't valid on backend
+    if (lastSyncedCodeRef.current === targetCode && !currentAppliedBulk) {
+      return;
+    }
+
+    const syncBulkDiscount = async () => {
+      isAutoSyncingRef.current = true;
+      lastSyncedCodeRef.current = targetCode;
+
+      try {
+        // If a different bulk tier was applied, remove it first
+        if (currentAppliedBulk && currentAppliedBulk.code.toLowerCase() !== targetCode?.toLowerCase()) {
+          await removeCoupon(currentAppliedBulk.code);
+        }
+
+        // Apply new active tier coupon
+        if (targetCode && activeTier) {
+          const res = await applyCoupon(targetCode);
+          if (res.success) {
+            toast.success(`🎉 ${activeTier.name} unlocked! ${activeTier.discountLabel} OFF automatically applied to your cart.`);
+            await fetchCart();
+          } else {
+            console.log(`[Bulk Savings] Auto-apply note: ${res.error}`);
+          }
+        } else if (currentAppliedBulk && !targetCode) {
+          toast.info("Cart value fell below threshold. Bulk savings coupon removed.");
+          await fetchCart();
+        }
+      } catch (err) {
+        console.error("[Bulk Savings] Sync error:", err);
+      } finally {
+        isAutoSyncingRef.current = false;
+      }
+    };
+
+    syncBulkDiscount();
+  }, [rawSubtotal, activeTier?.code, cart?.coupons, cartItems.length]);
 
   return (
     <>
@@ -187,6 +331,7 @@ export function CartClient({
           
           {/* Left Column - Cart Items */}
           <div className="flex-1 w-full bg-card border border-border rounded-[24px] p-6 md:p-8 shadow-sm">
+
             {/* Cart Table (Desktop) */}
             <div className="hidden md:block w-full">
               <div className="grid grid-cols-12 gap-4 pb-4 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -215,7 +360,14 @@ export function CartClient({
                         </div>
                         <div className="min-w-0 pr-4">
                           <h3 className="text-base font-semibold text-foreground truncate">{item.name}</h3>
-                          <p className="text-xs text-muted-foreground mt-1">Item ID: {item.id}</p>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            <span className="text-xs text-muted-foreground">Item ID: {item.id}</span>
+                            {item.in_basket?.gift_username && (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary border border-primary/20">
+                                <Gift size={11} /> Gift for @{item.in_basket.gift_username}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -269,6 +421,13 @@ export function CartClient({
                       </div>
                       <div className="flex-1">
                         <h3 className="text-sm font-semibold text-foreground leading-tight">{item.name}</h3>
+                        {item.in_basket?.gift_username && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[10.5px] font-bold text-primary border border-primary/20">
+                              <Gift size={11} /> Gift for @{item.in_basket.gift_username}
+                            </span>
+                          </div>
+                        )}
                         <div className="font-bold text-foreground mt-2 text-sm">
                           {total === 0 ? "Free" : `${total.toFixed(2)} ${currency}`}
                         </div>
@@ -295,29 +454,153 @@ export function CartClient({
           {/* Right Column - Checkout Summary Box */}
           <div className="w-full lg:w-[420px] shrink-0 sticky top-[120px]">
             <div className="bg-card border border-border rounded-[24px] p-6 lg:p-8 flex flex-col gap-6 shadow-sm">
+              
+              {/* ── Fresh Minimalist Bulk Savings Segmented Meter ── */}
+              <div className="rounded-2xl border border-border bg-muted/40 p-5 sm:p-6 flex flex-col gap-4.5">
+                {/* Header: Title, Active Status, Live Saving Amount */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-xl bg-foreground text-background flex items-center justify-center shrink-0 shadow-xs">
+                      <Sparkles size={17} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs sm:text-[13px] font-black uppercase tracking-wider text-foreground">
+                        Bulk Savings
+                      </span>
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {activeTier ? (
+                          <span className="text-foreground font-semibold">
+                            {activeTier.name} ({activeTier.discountLabel} OFF) Active
+                          </span>
+                        ) : (
+                          "Spend & save on your cart"
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  {activeTier && (
+                    <span className="text-xs sm:text-sm font-black text-foreground bg-foreground/10 px-3 py-1 rounded-full">
+                      -{currencySymbol}{((rawSubtotal * activeTier.discountPercentage) / 100).toFixed(2)}
+                    </span>
+                  )}
+                </div>
+
+                {/* 3-Stage Connected Segmented Rail */}
+                <div className="space-y-2.5 pt-1">
+                  <div className="grid grid-cols-3 gap-2 h-2.5 w-full rounded-full overflow-hidden bg-muted">
+                    {bulkTiers.map((tier, idx) => {
+                      const prevMin = idx === 0 ? 0 : bulkTiers[idx - 1].minimum;
+                      const tierRange = tier.minimum - prevMin;
+                      const segmentProgress = Math.min(
+                        100,
+                        Math.max(0, ((rawSubtotal - prevMin) / tierRange) * 100)
+                      );
+                      const isReached = rawSubtotal >= tier.minimum;
+
+                      return (
+                        <div key={tier.id} className="relative h-full w-full bg-border/80 overflow-hidden rounded-full">
+                          <motion.div
+                            className={`h-full rounded-full transition-all ${
+                              isReached ? "bg-foreground" : "bg-foreground/85"
+                            }`}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${segmentProgress}%` }}
+                            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Segment Milestone Labels */}
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    {bulkTiers.map((tier) => {
+                      const isReached = rawSubtotal >= tier.minimum;
+                      const isCurrentlyActive = activeTier?.id === tier.id;
+
+                      return (
+                        <div key={tier.id} className="flex flex-col items-center">
+                          <span
+                            className={`text-xs sm:text-[13px] font-extrabold tracking-tight ${
+                              isCurrentlyActive
+                                ? "text-foreground"
+                                : isReached
+                                ? "text-foreground/90"
+                                : "text-muted-foreground/60"
+                            }`}
+                          >
+                            {tier.discountLabel}
+                          </span>
+                          <span className="text-[11px] sm:text-xs text-muted-foreground font-mono font-medium mt-0.5">
+                            {currencySymbol}{tier.minimum.toFixed(0)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Dynamic Motivation Footer */}
+                <div className="pt-3.5 border-t border-border/60 text-xs sm:text-[13px] text-muted-foreground flex items-center justify-between">
+                  {nextTier ? (
+                    <>
+                      <span>Next: <strong className="text-foreground font-bold">{nextTier.discountLabel} OFF</strong></span>
+                      <span className="font-bold text-foreground">
+                        +{currencySymbol}{amountNeeded.toFixed(2)} more
+                      </span>
+                    </>
+                  ) : (
+                    <span className="font-bold text-foreground w-full text-center">
+                      ✓ Maximum bulk discount unlocked!
+                    </span>
+                  )}
+                </div>
+              </div>
+
               {/* Promotional Code */}
               <div className="space-y-3">
                 <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <Tag size={14} className="text-primary" /> Promotional Code
+                  <Tag size={14} className="text-primary" /> Coupon Code
                 </h3>
                 
                 {coupons.length > 0 && (
                   <div className="flex flex-col gap-2">
-                    {coupons.map((c: any) => (
-                      <div key={c.code} className="flex items-center justify-between p-2.5 rounded-xl border border-primary/20 bg-primary/5">
-                        <div className="flex items-center gap-2">
-                          <Tag size={13} className="text-primary" />
-                          <span className="font-bold text-xs text-primary">{c.code}</span>
+                    {coupons.map((c: any) => {
+                      const matchedBulkTier = bulkTiers.find(
+                        (t) => t.code.toLowerCase() === c.code.toLowerCase()
+                      );
+
+                      return (
+                        <div key={c.code} className="flex items-center justify-between p-2.5 rounded-xl border border-primary/20 bg-primary/5">
+                          <div className="flex items-center gap-2">
+                            <Tag size={13} className="text-primary" />
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-xs text-primary">{c.code}</span>
+                                {matchedBulkTier && (
+                                  <span className="rounded-md bg-muted px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-foreground border border-border">
+                                    Bulk Savings
+                                  </span>
+                                )}
+                              </div>
+                              {matchedBulkTier && (
+                                <span className="text-[10.5px] text-muted-foreground font-medium">
+                                  Tier {matchedBulkTier.name} ({matchedBulkTier.discountLabel} OFF)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => handleRemoveCoupon(c.code)}
+                            disabled={removingCouponCode === c.code}
+                            className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50 p-1"
+                          >
+                            {removingCouponCode === c.code ? <Loader2 size={13} className="animate-spin" /> : <X size={15} />}
+                          </button>
                         </div>
-                        <button 
-                          onClick={() => handleRemoveCoupon(c.code)}
-                          disabled={removingCouponCode === c.code}
-                          className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50 p-1"
-                        >
-                          {removingCouponCode === c.code ? <Loader2 size={13} className="animate-spin" /> : <X size={15} />}
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 
@@ -502,6 +785,17 @@ export function CartClient({
                   <span>Delivery</span>
                   <span className="text-primary font-medium">Free</span>
                 </div>
+                {activeTier && (
+                  <div className="flex items-center justify-between text-sm text-foreground">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <Sparkles size={12} className="text-foreground" />
+                      Bulk Savings ({activeTier.discountLabel})
+                    </span>
+                    <span className="font-bold text-foreground">
+                      -{currencySymbol}{((rawSubtotal * activeTier.discountPercentage) / 100).toFixed(2)}
+                    </span>
+                  </div>
+                )}
                 <div className="pt-4 border-t border-border flex items-center justify-between">
                   <span className="text-lg font-bold text-foreground">Total</span>
                   <span className="text-2xl font-black text-foreground">

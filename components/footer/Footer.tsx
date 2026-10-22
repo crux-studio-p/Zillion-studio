@@ -42,34 +42,34 @@ export function Footer() {
     <footer className="relative w-full overflow-hidden bg-[#f2f2f0] dark:bg-[#121212] text-foreground border-t border-transparent dark:border-white/5 transition-colors">
 
       {/* ── top content row ─────────────────────────────── */}
-      <div className="mx-auto flex max-w-5xl flex-col gap-10 px-6 pt-14 sm:flex-row sm:gap-6">
+      <div className="mx-auto flex max-w-7xl flex-col gap-12 px-6 sm:px-12 pt-16 sm:pt-20 sm:flex-row sm:gap-12 lg:gap-16 justify-between">
 
         {/* brand block */}
-        <div className="flex shrink-0 flex-col gap-3 sm:w-56">
-          <Link href="/" className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+        <div className="flex shrink-0 flex-col gap-3.5 sm:w-72">
+          <Link href="/" className="flex items-center gap-2.5 text-lg sm:text-xl font-bold tracking-tight text-foreground">
+            <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
               <path d="M3 4l10 3-4 5zM14 9l7-1-3 7zM9 14l4 6-7-1z" fill="#5cc8b8" />
             </svg>
             {BRAND}
           </Link>
-          <p className="text-[12px] leading-[1.6] text-muted-foreground">
+          <p className="text-sm sm:text-[14.5px] leading-relaxed text-muted-foreground">
             Premium FiveM scripts and Tebex store templates, built for serious server owners.
           </p>
         </div>
 
         {/* nav columns */}
-        <div className="flex flex-1 flex-wrap gap-x-10 gap-y-8">
+        <div className="flex flex-1 flex-wrap gap-x-12 sm:gap-x-16 gap-y-10 justify-start sm:justify-center">
           {COLS.map((col) => (
-            <div key={col.heading} className="flex flex-col gap-3">
-              <p className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-neutral-400 dark:text-neutral-500">
+            <div key={col.heading} className="flex flex-col gap-4">
+              <p className="text-xs sm:text-[13px] font-bold uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500">
                 {col.heading}
               </p>
-              <ul className="flex flex-col gap-2.5">
+              <ul className="flex flex-col gap-3">
                 {col.links.map((l) => (
                   <li key={l.label}>
                     <Link
                       href={l.href}
-                      className="text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
+                      className="text-sm sm:text-[15px] text-muted-foreground transition-colors hover:text-foreground font-medium"
                     >
                       {l.label}
                     </Link>
@@ -81,19 +81,19 @@ export function Footer() {
         </div>
 
         {/* CTA block */}
-        <div className="flex shrink-0 flex-col gap-5">
+        <div className="flex shrink-0 flex-col gap-6 sm:w-64">
           {CTAS.map((c) => (
-            <Link key={c.label} href={c.href} className="group flex items-start gap-2.5">
-              <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-transform group-hover:scale-110">
-                <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <Link key={c.label} href={c.href} className="group flex items-start gap-3.5">
+              <span className="mt-0.5 grid h-8 w-8 sm:h-9 sm:w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-transform group-hover:scale-110 shadow-xs">
+                <svg viewBox="0 0 12 12" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
                   <path d="M2 10L10 2M10 2H4M10 2v6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </span>
               <span>
-                <span className="block text-[13px] font-semibold leading-tight text-foreground group-hover:underline">
+                <span className="block text-sm sm:text-[16px] font-bold leading-snug text-foreground group-hover:underline">
                   {c.label}
                 </span>
-                <span className="block text-[10.5px] text-muted-foreground">{c.sub}</span>
+                <span className="block text-xs sm:text-[13px] text-muted-foreground mt-0.5">{c.sub}</span>
               </span>
             </Link>
           ))}
