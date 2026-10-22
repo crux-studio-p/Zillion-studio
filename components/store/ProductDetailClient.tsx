@@ -16,7 +16,10 @@ import {
   HelpCircle,
   Loader2,
   Calendar,
-  Tag
+  Tag,
+  Gift,
+  User,
+  Sparkles
 } from "lucide-react";
 import { Nav } from "@/components/hero/Nav";
 import { Footer } from "@/components/footer/Footer";
@@ -51,6 +54,10 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [openChangelogIndex, setOpenChangelogIndex] = useState<number | null>(0);
+  
+  // Gifting state
+  const [purchaseMode, setPurchaseMode] = useState<"self" | "gift">("self");
+  const [recipientUsername, setRecipientUsername] = useState("");
   
   // Parse description content into structured sections
   const parsed = useMemo(() => {
@@ -105,12 +112,26 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
   }, [allReviews]);
 
   const handleAddToCart = async () => {
+    if (purchaseMode === "gift" && !recipientUsername.trim()) {
+      toast.error("Recipient Username Required", {
+        description: "Please enter the FiveM / Cfx.re username of the person receiving this gift.",
+      });
+      return;
+    }
+
     try {
       setIsAddingToCart(true);
       const currentPath = typeof window !== "undefined" ? window.location.pathname : "/store";
-      const res = await addToCart(pkg.id, currentPath);
+      const targetUser = purchaseMode === "gift" ? recipientUsername.trim() : undefined;
+      const res = await addToCart(pkg.id, currentPath, targetUser);
       if (res.success) {
-        toast.success(`"${pkg.name}" added to cart!`);
+        if (targetUser) {
+          toast.success(`Gift for @${targetUser} added to cart!`, {
+            description: "Asset license will be automatically granted to their Cfx.re account.",
+          });
+        } else {
+          toast.success(`"${pkg.name}" added to cart!`);
+        }
         window.dispatchEvent(new Event("cart-updated"));
       } else if (res.requiresAuth) {
         toast.error("FiveM Login Required", {
@@ -283,22 +304,143 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                 )}
               </div>
 
+              {/* Purchase Mode & Gifting Config */}
+              <div className="mt-8 rounded-2xl border border-border bg-card/70 p-4 shadow-sm backdrop-blur-xs transition-colors">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                    Purchase Type
+                  </span>
+                  {purchaseMode === "gift" ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary border border-primary/20">
+                      <Sparkles size={11} /> FiveM Keymaster Gift
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      Delivered to your account
+                    </span>
+                  )}
+                </div>
+
+                <div className="relative grid grid-cols-2 gap-1.5 p-1 bg-muted/80 rounded-xl border border-border">
+                  <button
+                    type="button"
+                    onClick={() => setPurchaseMode("self")}
+                    className={`relative flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-[13px] font-semibold transition-colors duration-200 outline-none select-none ${
+                      purchaseMode === "self"
+                        ? "text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {purchaseMode === "self" && (
+                      <motion.div
+                        layoutId="purchaseModePill"
+                        className="absolute inset-0 rounded-lg bg-primary shadow-sm"
+                        transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-2">
+                      <User size={15} />
+                      <span>For Myself</span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!pkg.disable_gifting) setPurchaseMode("gift");
+                    }}
+                    disabled={pkg.disable_gifting}
+                    className={`relative flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-[13px] font-semibold transition-colors duration-200 outline-none select-none ${
+                      purchaseMode === "gift"
+                        ? "text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                    }`}
+                  >
+                    {purchaseMode === "gift" && (
+                      <motion.div
+                        layoutId="purchaseModePill"
+                        className="absolute inset-0 rounded-lg bg-primary shadow-sm"
+                        transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-2">
+                      <Gift size={15} />
+                      <span>Gift to Friend</span>
+                    </span>
+                  </button>
+                </div>
+
+                {pkg.disable_gifting && (
+                  <p className="mt-2 text-[11px] text-muted-foreground text-center">
+                    Gifting is not enabled for this package by store policy.
+                  </p>
+                )}
+
+                <AnimatePresence>
+                  {purchaseMode === "gift" && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-4 pt-4 border-t border-border flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[12px] font-semibold text-foreground flex items-center gap-1.5">
+                            <span>Recipient's FiveM / Cfx.re Username</span>
+                          </label>
+                          <span className="text-[10.5px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded border border-border">
+                            Cfx.re Account
+                          </span>
+                        </div>
+
+                        <div className="relative flex items-center">
+                          <div className="pointer-events-none absolute left-3.5 flex items-center justify-center text-muted-foreground font-semibold text-sm">
+                            @
+                          </div>
+                          <input
+                            type="text"
+                            value={recipientUsername}
+                            onChange={(e) => setRecipientUsername(e.target.value)}
+                            placeholder="e.g. JohnDoe"
+                            className="w-full rounded-xl border border-border bg-background/90 pl-8 pr-3.5 py-2.5 text-[14px] font-medium text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                          />
+                        </div>
+
+                        <div className="flex items-start gap-2.5 rounded-xl bg-muted/60 p-3 text-[12px] leading-relaxed text-muted-foreground border border-border/80">
+                          <ShieldCheck size={16} className="text-primary shrink-0 mt-0.5" />
+                          <span>
+                            This script will be delivered directly to this player's <strong className="text-foreground">Cfx.re Keymaster</strong> (<span className="underline decoration-dotted">keymaster.fivem.net</span>) under <strong className="text-foreground">Granted Assets</strong>.
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
               {/* Add to Cart Button */}
-              <div className="mt-8">
+              <div className="mt-4">
                 <button 
                   onClick={handleAddToCart}
-                  disabled={isAddingToCart}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-[14px] font-bold text-primary-foreground shadow-lg shadow-primary/15 transition-transform hover:-translate-y-[2px] active:translate-y-0 active:scale-[0.98] disabled:opacity-70 disabled:hover:translate-y-0"
+                  disabled={isAddingToCart || (purchaseMode === "gift" && !recipientUsername.trim())}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-[14px] font-bold text-primary-foreground shadow-lg shadow-primary/15 transition-transform hover:-translate-y-[2px] active:translate-y-0 active:scale-[0.98] disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
                 >
                   {isAddingToCart ? (
                     <>
                       <Loader2 size={18} className="animate-spin" />
-                      Adding to Cart...
+                      {purchaseMode === "gift" ? "Adding Gift to Cart..." : "Adding to Cart..."}
+                    </>
+                  ) : purchaseMode === "gift" ? (
+                    <>
+                      <Gift size={18} />
+                      {recipientUsername.trim() ? `Gift to @${recipientUsername.trim()} • ${priceDisplay}` : `Enter Cfx.re Username to Gift`}
                     </>
                   ) : (
                     <>
                       <ShoppingBag size={18} />
-                      Add to Cart
+                      Add to Cart • {priceDisplay}
                     </>
                   )}
                 </button>

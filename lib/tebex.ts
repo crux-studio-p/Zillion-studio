@@ -87,6 +87,7 @@ export interface TebexPackage {
   sales_tax: number;
   discount: number;
   media?: { url: string; type: string }[];
+  disable_gifting?: boolean;
 }
 
 export interface TebexCategory {
@@ -116,18 +117,29 @@ export async function getCategoriesWithPackages(): Promise<TebexCategory[]> {
 }
 
 /**
- * Adds a specific package to the basket.
+ * Adds a specific package to the basket, optionally with a gift recipient (target_username / target_username_id).
  */
-export async function addPackageToBasket(ident: string, packageId: number, quantity: number = 1): Promise<any> {
+export async function addPackageToBasket(
+  ident: string,
+  packageId: number,
+  quantity: number = 1,
+  targetUsername?: string
+): Promise<any> {
+  const body: Record<string, any> = {
+    package_id: packageId,
+    quantity,
+  };
+
+  if (targetUsername && targetUsername.trim()) {
+    body.target_username = targetUsername.trim();
+  }
+
   const res = await fetch(`https://headless.tebex.io/api/baskets/${ident}/packages`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      package_id: packageId,
-      quantity,
-    }),
+    body: JSON.stringify(body),
     cache: "no-store",
   });
 
@@ -205,7 +217,7 @@ export interface TebexCouponItem {
  * Requires TEBEX_SERVER_SECRET (Game Server Secret Key) in environment variables.
  */
 export async function getStoreCoupons(): Promise<TebexCouponItem[]> {
-  const secret = process.env.TEBEX_SERVER_SECRET || process.env.TEBEX_PLUGIN_SECRET;
+  const secret = process.env.TEBEX_SERVER_SECRET || process.env.TEBEX_PLUGIN_SECRET || process.env.TEBEX_PRIVATE_TOKEN;
   if (!secret) {
     return [];
   }
@@ -269,9 +281,9 @@ export interface TebexGiftCard {
  * Requires TEBEX_SERVER_SECRET in environment variables.
  */
 export async function lookupGiftCard(code: string): Promise<TebexGiftCard | null> {
-  const secret = process.env.TEBEX_SERVER_SECRET || process.env.TEBEX_PLUGIN_SECRET;
+  const secret = process.env.TEBEX_SERVER_SECRET || process.env.TEBEX_PLUGIN_SECRET || process.env.TEBEX_PRIVATE_TOKEN;
   if (!secret) {
-    throw new Error("Server secret key (TEBEX_SERVER_SECRET) is required to look up gift cards. Please add it to your .env file.");
+    throw new Error("Server secret key (TEBEX_SERVER_SECRET or TEBEX_PRIVATE_TOKEN) is required to look up gift cards. Please add it to your .env file.");
   }
 
   const cleanCode = code.replace(/[\s-]/g, "").trim();

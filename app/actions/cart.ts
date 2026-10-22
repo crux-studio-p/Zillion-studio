@@ -39,11 +39,11 @@ async function getOrCreateBasketIdent(): Promise<string> {
   return basketIdent;
 }
 
-export async function addToCart(packageId: number, returnUrl?: string) {
+export async function addToCart(packageId: number, returnUrl?: string, targetUsername?: string) {
   try {
     let basketIdent = await getOrCreateBasketIdent();
     try {
-      await addPackageToBasket(basketIdent, packageId, 1);
+      await addPackageToBasket(basketIdent, packageId, 1, targetUsername);
     } catch (err: any) {
       const isLoginRequired =
         err?.status === 422 &&
@@ -78,7 +78,7 @@ export async function addToCart(packageId: number, returnUrl?: string) {
         const cookieStore = await cookies();
         cookieStore.delete("tebex_basket");
         basketIdent = await getOrCreateBasketIdent();
-        await addPackageToBasket(basketIdent, packageId, 1);
+        await addPackageToBasket(basketIdent, packageId, 1, targetUsername);
       } else {
         throw err;
       }
