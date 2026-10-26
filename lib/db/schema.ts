@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, varchar, uuid, pgEnum, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, varchar, uuid, pgEnum, integer, jsonb, index } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum('role', ['SuperAdmin', 'Admin', 'Editor', 'Support', 'Developer']);
 export const statusEnum = pgEnum('status', ['Draft', 'Published']);
@@ -9,6 +9,7 @@ export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 255 }),
   email: varchar("email", { length: 255 }).notNull().unique(),
+  passwordHash: text("password_hash"),
   role: roleEnum("role").default("Support").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -53,3 +54,25 @@ export const affiliateApplications = pgTable("affiliate_applications", {
   status: affiliateStatusEnum("status").default("Pending").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const productChangelogs = pgTable(
+  "product_changelogs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tebexPackageId: varchar("tebex_package_id", { length: 100 }).notNull(),
+    version: varchar("version", { length: 50 }).notNull(), // e.g. "v1.2.0"
+    releaseDate: varchar("release_date", { length: 50 }).notNull(), // e.g. "2026-10-27"
+    title: varchar("title", { length: 255 }), // optional release headline
+    changes: jsonb("changes").$type<string[]>().notNull().default([]), // bullet points list
+    bodyHtml: text("body_html"), // optional markdown / html fallback
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("changelogs_tebex_package_idx").on(table.tebexPackageId),
+  ]
+);
+
+export type ProductChangelog = typeof productChangelogs.$inferSelect;
+export type NewProductChangelog = typeof productChangelogs.$inferInsert;
+
