@@ -29,6 +29,7 @@ import { submitReview, getApprovedReviews } from "@/lib/actions/review.actions";
 import { addToCart } from "@/app/actions/cart";
 import { toast } from "sonner";
 import { TebexPackage } from "@/lib/tebex";
+import { ProductChangelog } from "@/lib/db/schema";
 import { parsePackageDescription } from "@/lib/parsers/description-parser";
 import { EASE_OUT } from "@/lib/hero-timing";
 
@@ -49,7 +50,13 @@ const fadeUp: Variants = {
   },
 };
 
-export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryName?: string } }) {
+export function ProductDetailClient({ 
+  pkg, 
+  changelogs = [] 
+}: { 
+  pkg: TebexPackage & { categoryName?: string };
+  changelogs?: ProductChangelog[];
+}) {
   const [productReviews, setProductReviews] = useState<any[]>([]);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
@@ -63,6 +70,37 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
   const parsed = useMemo(() => {
     return parsePackageDescription(pkg.description || "");
   }, [pkg.description]);
+
+  // Database changelogs take priority over description parsed changelogs
+  const activeChangelogs = useMemo(() => {
+    if (changelogs && changelogs.length > 0) {
+      return changelogs.map((c) => ({
+        id: c.id,
+        version: c.version,
+        date: c.releaseDate,
+        title: c.title,
+        changes: c.changes || [],
+        bodyHtml: c.bodyHtml || "",
+      }));
+    }
+    // Fallback if not yet migrated in DB
+    return parsed.changelog.map((c, i) => ({
+      id: `desc-${i}`,
+      version: c.version,
+      date: c.date,
+      title: null,
+      changes: c.changes || [],
+      bodyHtml: c.bodyHtml || "",
+    }));
+  }, [changelogs, parsed.changelog]);
+
+  const latestVersion = useMemo(() => {
+    return activeChangelogs.length > 0 ? activeChangelogs[0].version : parsed.version;
+  }, [activeChangelogs, parsed.version]);
+
+  const lastUpdated = useMemo(() => {
+    return activeChangelogs.length > 0 ? activeChangelogs[0].date : parsed.lastUpdated;
+  }, [activeChangelogs, parsed.lastUpdated]);
 
   useEffect(() => {
     getApprovedReviews(pkg.id.toString()).then(setProductReviews);
@@ -253,17 +291,17 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                   {pkg.categoryName || "Package"}
                 </span>
 
-                {parsed.version && (
+                {latestVersion && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary border border-primary/20">
                     <Tag size={10} />
-                    {parsed.version}
+                    {latestVersion}
                   </span>
                 )}
 
-                {parsed.lastUpdated && (
+                {lastUpdated && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
                     <Calendar size={11} />
-                    {parsed.lastUpdated}
+                    {lastUpdated}
                   </span>
                 )}
               </div>
@@ -518,7 +556,7 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
           </div>
 
           {/* ── Product Changelog / Release History Section ── */}
-          {parsed.changelog.length > 0 && (
+          {activeChangelogs.length > 0 && (
             <motion.div variants={fadeUp} className="mt-28">
               <div className="mb-8 flex items-center justify-between">
                 <div>
@@ -530,17 +568,19 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                     Release Changelog
                   </h2>
                 </div>
-                <span className="text-[13px] font-medium text-muted-foreground">
-                  Latest: {parsed.version}
-                </span>
+                {latestVersion && (
+                  <span className="text-[13px] font-medium text-muted-foreground">
+                    Latest: {latestVersion}
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-col gap-3">
-                {parsed.changelog.map((entry, idx) => {
+                {activeChangelogs.map((entry, idx) => {
                   const isOpen = openChangelogIndex === idx;
                   return (
                     <div 
-                      key={idx}
+                      key={entry.id || idx}
                       className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs transition-colors"
                     >
                       <button
@@ -554,6 +594,11 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                           {entry.date && (
                             <span className="text-[13px] text-muted-foreground">
                               {entry.date}
+                            </span>
+                          )}
+                          {entry.title && (
+                            <span className="text-[13px] font-medium text-foreground hidden sm:inline">
+                              • {entry.title}
                             </span>
                           )}
                         </div>
@@ -571,6 +616,11 @@ export function ProductDetailClient({ pkg }: { pkg: TebexPackage & { categoryNam
                             exit={{ height: 0, opacity: 0, transition: { duration: 0.15 } }}
                             className="overflow-hidden border-t border-border bg-muted/30 px-6 py-4"
                           >
+                            {entry.title && (
+                              <p className="text-[14px] font-semibold text-foreground mb-3 sm:hidden">
+                                {entry.title}
+                              </p>
+                            )}
                             {entry.changes.length > 0 ? (
                               <ul className="space-y-2">
                                 {entry.changes.map((change, cIdx) => (

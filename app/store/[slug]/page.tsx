@@ -1,4 +1,5 @@
 import { getCategoriesWithPackages } from "@/lib/tebex";
+import { getChangelogsByPackageId } from "@/lib/actions/changelog.actions";
 import { notFound } from "next/navigation";
 import { ProductDetailClient } from "@/components/store/ProductDetailClient";
 
@@ -22,5 +23,8 @@ export default async function ProductDetailPage({
     notFound();
   }
 
-  return <ProductDetailClient pkg={pkg} />;
+  // Fetch product changelogs from PostgreSQL
+  const changelogs = await getChangelogsByPackageId(pkg.id.toString());
+
+  return <ProductDetailClient pkg={pkg} changelogs={changelogs} />;
 }
